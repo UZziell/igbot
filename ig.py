@@ -49,8 +49,6 @@ USERNAME = args.username
 ADMINS = ["Improve_2020", "Girlylife.mm", "Iiraangard"]
 VIPS = ["solace.land"]
 
-# USERNAME = "hamzeh_jmoh"
-
 HASHTAG = "TAG--" + jdatetime.datetime.now().strftime("%A-%d-%m-%Y--%H-%M")
 TAGGED_PROFILE = "pishraftmikonim"
 TOP3 = ['CH2XYMEgFUQ', 'CH2YE7nnean', 'CH2YzyWgnXY']
