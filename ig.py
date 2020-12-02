@@ -51,7 +51,7 @@ VIPS = ["solace.land"]
 
 HASHTAG = "TAG--" + jdatetime.datetime.now().strftime("%A-%d-%m-%Y--%H-%M")
 TAGGED_PROFILE = "pishraftmikonim"
-TOP3 = ['CH2XYMEgFUQ', 'CH2YE7nnean', 'CH2YzyWgnXY']
+TOP3 = ['CIJI0FZAQ8L', 'CIJJEdeAQHh', 'CIJHbV5BFBQ']
 # --------------------------------------------------------------------------
 # Constants (Variables you can't change unless you know what you are doing)
 PASSWORD = LOGIN_CREDS[USERNAME.lower()]
@@ -471,6 +471,7 @@ def get_tagged_posters(username, loader):
     if exists(ITTERATOR_TEMP):
         loded_itr = load_from_file(ITTERATOR_TEMP)
         posters = load_from_file(POSTERS_TEMP)
+        logger.info(f"Loaded post-itterator and {len(posters)} posts from file, continuing...")
         post_iterator.thaw(loded_itr)
 
     print("TYPE: ", type(post_iterator.freeze()))
@@ -603,7 +604,7 @@ def find_assholes():
         # find which client didn't like current post and add one to clients_likes[client] dict
         for user in posters:
             shadow_account = user + ".hami2020"
-            if user not in post_likers and shadow_account not in post_likers:
+            if user not in post_likers and (shadow_account not in post_likers or user+".lrs" not in post_likers):
                 clients_likes.setdefault(user, 0)
                 clients_likes[user] += 1
                 if clients_likes[user] == len(TOP3):
