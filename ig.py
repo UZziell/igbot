@@ -16,20 +16,20 @@ from time import sleep
 
 import jdatetime
 import pysftp
-import requests
-import selenium
+# import requests
+# import selenium
 # from bullet import Bullet, Check, YesNo, Input  # and etc...
 from instaloader import (FrozenNodeIterator, Hashtag, Post, Profile,
                          instaloader, resumable_iteration)
-from requests import Timeout
-from selenium import webdriver
-from selenium.webdriver import ActionChains
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
-from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+# from requests import Timeout
+# from selenium import webdriver
+# from selenium.webdriver import ActionChains
+# from selenium.webdriver.common.by import By
+# from selenium.webdriver.common.keys import Keys
+# from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
+# from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
+# from selenium.webdriver.support import expected_conditions as EC
+# from selenium.webdriver.support.ui import WebDriverWait
 
 try:
     from my_secrets import *
@@ -49,9 +49,10 @@ USERNAME = args.username
 ADMINS = ["Improve_2020", "Girlylife.mm", "Iiraangard"]
 VIPS = ["solace.land"]
 
-HASHTAG = "TAG--" + jdatetime.datetime.now().strftime("%A-%d-%m-%Y--%H-%M")
+# HASHTAG = "TAG--" + jdatetime.datetime.now().strftime("%A-%d-%m-%Y--%H-%M")
+HASHTAG = "درخانه_امن_هستیم"
 TAGGED_PROFILE = "pishraftmikonim"
-TOP3 = ['CIJI0FZAQ8L', 'CIJJEdeAQHh', 'CIJHbV5BFBQ']
+TOP3 = ['CIaaBKBn1rk', 'CIaRQ7Vjcyi', 'CIaaq9JA_FC']
 # --------------------------------------------------------------------------
 # Constants (Variables you can't change unless you know what you are doing)
 PASSWORD = LOGIN_CREDS[USERNAME.lower()]
@@ -567,10 +568,12 @@ def find_assholes():
     if exists(POSTERS_TEMP_FILE+"_"):
         posters = load_from_file(POSTERS_TEMP_FILE+"_")
     else:
-        # posters = get_hashtag_posters(HASHTAG, L)
-        posters = get_tagged_posters(TAGGED_PROFILE, L)
+        posters = get_hashtag_posters(HASHTAG, L)
+        # posters = get_tagged_posters(TAGGED_PROFILE, L)
         # posters = get_hashtag_posters2(HASHTAG)
         dump_to_file(posters, POSTERS_TEMP_FILE+"_")
+
+
 
     logger.info(
         f"len(posters)={len(posters)} - len(set(posters))={len(set(posters))}")
@@ -849,10 +852,12 @@ def menu():
 
         if user_choice == "1":
             COMPLETE_EXECUTION = True
+            # input_tag = input(
+            #     f"\n - Enter a tagged user (press enter to skip and use '{TAGGED_PROFILE}' as tagged user): ")
             input_tag = input(
-                f"\n - Enter a tagged user (press enter to skip and use '{TAGGED_PROFILE}' as tagged user): ")
+                f"\n - Enter n new hashtag (or press enter to skip and use '{HASHTAG}' as tagged user): ")
             if input_tag != "":
-                TAGGED_PROFILE = input_tag.strip()
+                HASHTAG = input_tag.strip()
 
             nth = {1: "first", 2: "second", 3: "third"}
             for i in range(0, 3):
