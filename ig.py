@@ -607,7 +607,9 @@ def find_assholes():
 
         # find which client didn't like current post and add one to clients_likes[client] dict
         for user in posters:
-            if (user not in post_likers and user+".hami2020" not in post_likers) or (user not in post_likers and user+".lrs" not in post_likers):
+            if user in post_likers or user +".hami2020" in post_likers or user+".lrs" in post_likers or user+".ikiu" in post_likers:
+                pass
+            else:
                 clients_likes.setdefault(user, 0)
                 clients_likes[user] += 1
                 if clients_likes[user] == len(TOP3):
