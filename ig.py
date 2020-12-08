@@ -40,9 +40,12 @@ except ImportError:
 parser = argparse.ArgumentParser()
 parser.add_argument('-u', '--username', required=True,
                     help="Instagram username to use, REQUIRED")
+parser.add_argument('-p', '--password', required=True,
+                    help="Instagram password to use, REQUIRED")
 args = parser.parse_args()
 
 USERNAME = args.username
+PASSWORD = args.password
 
 # --------------------------------------------------------------------------
 # Inputs (variables you can change)
@@ -50,12 +53,12 @@ ADMINS = ["Improve_2020", "Girlylife.mm", "Iiraangard"]
 VIPS = ["solace.land"]
 
 # HASHTAG = "TAG--" + jdatetime.datetime.now().strftime("%A-%d-%m-%Y--%H-%M")
-HASHTAG = "#انلاین_خرید_کنیم_کرونا_هست"
+HASHTAG = "#خدمات_انلاین_داریم"
 TAGGED_PROFILE = "pishraftmikonim"
-TOP3 = ['CIbLM1UHZxe', 'CIbJWBqAgGl', 'CIbJaWBBvo8']
+TOP3 = ['CIiH8varTJ7', 'CIiHl8ojPF2', 'CIiIO2iFCLc']
 # --------------------------------------------------------------------------
 # Constants (Variables you can't change unless you know what you are doing)
-PASSWORD = LOGIN_CREDS[USERNAME.lower()]
+# PASSWORD = LOGIN_CREDS[USERNAME.lower()]
 SESSION_FILE = f"sessions/{USERNAME}-SESSION"
 WARN_HISTORY_FILE = "data/warn_history.pickle"
 WARN_HISTORY_REMOTE_PATH = "/littleuzer/ig/warn_history.pickle"
@@ -163,37 +166,48 @@ def get_followings(usernames, igloader):
 
 
 def get_hashtag_posters(hashtag, loader):
+    "Find posts from hashtag"
+    # ITTERATOR_TEMP = "temp/frozenNodeIterator.pickle.tmp"
+    # POSTERS_TEMP = "temp/posters.pickle.tmp"
     posters = []
+
     if "#" in hashtag:
         hashtag = hashtag.replace("#", "")
 
     logger.info(
-        f"Finding posts with hashtag '{hashtag}'. This will take some time to complete! (25-35 minutes for every ~500 posts)")
+        f"Finding posts with hashtag '{hashtag}'. This will take some time to complete! (30-40 minutes for every ~500 posts)")
 
     post_iterator = Hashtag.from_name(loader.context, hashtag).get_posts()
 
-    try:
-        for post in post_iterator:
-            sleep(round(random.uniform(1.000, 3.000), 3))
+    # try:
+    for post in post_iterator:
+        try:
+            sleep(round(random.uniform(3.000, 4.500), 3))
             posters.append(post.owner_username)
             print(post.owner_username, "\t", post.date)
             if len(posters) % 50 == 0:
                 print(
                     f"\t\t\t{get_time()}\tposts found so far: {len(posters)}")
-    except KeyboardInterrupt as e:
-        logger.error(f"keyboardInterrupt, EXITED\n Details: {e}")
-        sys.exit("Hmmm :/  User interrupted execution. \n EXITED 1")
-    except instaloader.QueryReturnedBadRequestException as e:
-        logger.exception(f"Exception details:\n {e}")
-        logger.error(
-            f"Bad Request Exception. Probably the account '{USERNAME}' was limited by instagram.\
-                Try changing the USERNAME variable to other accounts or solve challenge from instagram web and remove session file '{SESSION_FILE}' and try again.")
-        sys.exit("Finally Call Support :) and give them this error log\nEXITED 1")
-    except Exception as e:
-        logger.error(
-            f"Exception in recieving post from instagram, EXITED\n Details: {e}")
-        sys.exit(
-            "Hmmm :/  -  Call Support :) and give them this error log\nEXITED 1")
+
+        except instaloader.QueryReturnedBadRequestException as e:
+            remove_file(SESSION_FILE)
+            logger.exception(f"Exception details:\n {e}")
+            logger.error(
+                f"Bad Request Exception. Probably the account '{USERNAME}' was limited by instagram.\n\
+                    To solve this: First try to *(solve captcha)* from instagram web and *(verify phone number)* and change password if required.\n")
+            input(
+                "ONLY when you SOLVED THE CAPTCHA and the account was NO LONGER LIMITED, 'press enter to continiue':  ")
+            # You can also change -u command line argument to another account to fix this error")
+            # sys.exit("Finally if none of above soleved the promlem, Call Support :) and give them this error log\nEXITED 1")
+
+        except Exception as e:
+            logger.error(
+                f"Exception in fetching posts from instagram, EXITED\n Details: {e}")
+            sys.exit(
+                "Probably your internet was disconnected, 'Try to run again!!' \nEXITED 1")
+    # except KeyboardInterrupt as e:
+    #     logger.error(f"keyboardInterrupt, \n Details: {e}")
+    #     sys.exit("User interrupted execution.\n EXITED 1")
 
     return posters
 
@@ -461,8 +475,8 @@ def get_tagged_posters(username, loader):
     """Find posters that tagged a username"""
     ITTERATOR_TEMP = "temp/frozenNodeIterator.pickle.tmp"
     POSTERS_TEMP = "temp/posters.pickle.tmp"
-
     posters = []
+
     logger.info(
         f"Finding posts that user '{username}' was tagged in. This will take some time to complete! (25-35 minutes for every ~500 posts)")
 
@@ -495,14 +509,15 @@ def get_tagged_posters(username, loader):
     except instaloader.QueryReturnedBadRequestException as e:
         dump_to_file(post_iterator.freeze(), ITTERATOR_TEMP)
         dump_to_file(posters, POSTERS_TEMP)
+        remove_file(SESSION_FILE)
 
         logger.exception(f"Exception details:\n {e}")
         logger.error(
             f"Bad Request Exception. Probably the account '{USERNAME}' was limited by instagram.\n\
-                To solve this: First try to *(solve captcha)* from instagram web and *(verify phone number)*. Then remove session file '{SESSION_FILE}' and try again.\n\
+                To solve this: First try to *(solve captcha)* from instagram web and *(verify phone number)* and change password if required.\n\
                 You can also change -u command line argument to another account to fix this error")
-        sys.exit(
-            "Finally if none of above soleved the promlem, Call Support :) and give them this error log\nEXITED 1")
+        sys.exit("\nEXITED 1")
+
     except Exception as e:
         dump_to_file(post_iterator.freeze(), ITTERATOR_TEMP)
         dump_to_file(posters, POSTERS_TEMP)
@@ -510,7 +525,7 @@ def get_tagged_posters(username, loader):
         logger.error(
             f"Exception in fetching posts from instagram, EXITED\n Details: {e}")
         sys.exit(
-            "Hmmm :/ THIS IS A NEW ERROR -  Call Support and give them this error log\nEXITED 1")
+            "Probably your internet was disconnected, 'Try to run again!!' \nEXITED 1")
 
     remove_file(ITTERATOR_TEMP)
     remove_file(POSTERS_TEMP)
@@ -526,15 +541,16 @@ def get_post_likers(shortcode, loader):
             f"HUMAN READABLE ERROR LOG:\n\
                 Could not create post from shortcode '{shortcode}'.\n\
                     Make sure:\n\t-the post is not deleted and \n\t-there is no typo in the shortcode \n then try again")
-        sys.exit("ORRRR Call Support :) and give them this error log")
+        sys.exit("Exited 1")
 
     except instaloader.QueryReturnedBadRequestException as e:
+        remove_file(SESSION_FILE)
         logger.exception(f"Exception details: {e}")
         logger.error(f"HUMAN READABLE ERROR LOG:\n\
                 Well, I guess Instagram limited the Account '{USERNAME} again.\n\
                 Solve the captcha from instagram web and make sure the password is correct.\n\
                 If the problem persisted remove session file '{SESSION_FILE}'.")
-        sys.exit("Finally Call Support :) and give them this error log\nEXITED 1")
+        sys.exit("DO ABOVE ADN RUN AGIAN.\nEXITED 1")
 
     post_likers = []
     for liker_profile in post.get_likes():
@@ -573,8 +589,6 @@ def find_assholes():
         # posters = get_hashtag_posters2(HASHTAG)
         dump_to_file(posters, POSTERS_TEMP_FILE+"_")
 
-
-
     logger.info(
         f"len(posters)={len(posters)} - len(set(posters))={len(set(posters))}")
     logger.debug(f"'{len(posters)}' posters:    {sorted(posters)}\n\n")
@@ -607,9 +621,7 @@ def find_assholes():
 
         # find which client didn't like current post and add one to clients_likes[client] dict
         for user in posters:
-            if user in post_likers or user +".hami2020" in post_likers or user+".lrs" in post_likers or user+".ikiu" in post_likers:
-                pass
-            else:
+            if user in post_likers and user+".hami2020" not in post_likers and user+".lrs" not in post_likers and user+".ikiu" not in post_likers:
                 clients_likes.setdefault(user, 0)
                 clients_likes[user] += 1
                 if clients_likes[user] == len(TOP3):
