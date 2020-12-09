@@ -49,7 +49,9 @@ PASSWORD = args.password
 
 # --------------------------------------------------------------------------
 # Inputs (variables you can change)
-ADMINS = ["Improve_2020", "Girlylife.mm", "Iiraangard"]
+ADMINS = ["Improve_2020", "Girlylife.mm", "ghazal.nasiriyan", "karmaroz1",
+          "rozgoli53", "F.joharynad_2", "Farzaneh.jnad.55", "Shabahang_perfume", "Istanbul_va_bishtar"]
+          
 VIPS = ["solace.land"]
 
 # HASHTAG = "TAG--" + jdatetime.datetime.now().strftime("%A-%d-%m-%Y--%H-%M")
