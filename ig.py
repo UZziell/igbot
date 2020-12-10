@@ -16,6 +16,7 @@ from time import sleep
 
 import jdatetime
 import pysftp
+from pyrogram import Client
 # import requests
 # import selenium
 # from bullet import Bullet, Check, YesNo, Input  # and etc...
@@ -51,7 +52,7 @@ PASSWORD = args.password
 # Inputs (variables you can change)
 ADMINS = ["Improve_2020", "Girlylife.mm", "ghazal.nasiriyan", "karmaroz1",
           "rozgoli53", "F.joharynad_2", "Farzaneh.jnad.55", "Shabahang_perfume", "Istanbul_va_bishtar"]
-          
+
 VIPS = ["solace.land"]
 
 # HASHTAG = "TAG--" + jdatetime.datetime.now().strftime("%A-%d-%m-%Y--%H-%M")
@@ -132,6 +133,11 @@ def remove_file(file_path):
     if os.path.exists(file_path):
         os.remove(file_path)
         logger.debug(f"Removed file '{file_path}'")
+
+
+def telegram_send(id, message):
+    with Client("sessions/pyrog.session", APP_ID, API_HASH, proxy=dict(hostname='127.0.0.1', port=9050)) as app:
+        app.send_message(id, message)
 
 
 def instaloader_init():
@@ -652,6 +658,11 @@ def find_assholes():
         \n{ASTERISK*WIDTH}\n"
 
     logger.info(report)
+    msg_cheaters = "CHEATERS: \n\n"
+    for cheater in cheaters:
+        msg_cheaters += (cheater + "\n")
+
+    telegram_send("me", msg_cheaters)
 
     # CLEAN UP
     # dump last warn list and hashtag to file
@@ -818,6 +829,8 @@ def print_last_warn():
             # print("")
 
     print(fancy)
+    telegram_send("me", fancy)
+    
     if COMPLETE_EXECUTION:  # write fancy list to report file if find assholes function was called before
         with open(f"logs/report-{HASHTAG}.txt", "a") as af:
             af.write(fancy)
