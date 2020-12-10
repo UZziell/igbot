@@ -135,9 +135,9 @@ def remove_file(file_path):
         logger.debug(f"Removed file '{file_path}'")
 
 
-def telegram_send(id, message):
+def telegram_send(user_id, message):
     with Client("sessions/pyrog.session", APP_ID, API_HASH, proxy=dict(hostname='127.0.0.1', port=9050)) as app:
-        app.send_message(id, message)
+        app.send_message(user_id, message)
 
 
 def instaloader_init():
@@ -830,7 +830,7 @@ def print_last_warn():
 
     print(fancy)
     telegram_send("me", fancy)
-    
+
     if COMPLETE_EXECUTION:  # write fancy list to report file if find assholes function was called before
         with open(f"logs/report-{HASHTAG}.txt", "a") as af:
             af.write(fancy)
