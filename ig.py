@@ -135,9 +135,27 @@ def remove_file(file_path):
         logger.debug(f"Removed file '{file_path}'")
 
 
-def telegram_send(user_id, message):
+def telegram_send(user_id, header, message):
+    "Parse message and devide to chunks then send to user_id"
+    if isinstance(message, str):
+        message = message.splitlines()
+
+    split = [f"<b>#{header} #{HASHTAG}</b> 👇🏼\n"]
+    msg = ""
+    for i, line in enumerate(message):
+        msg += line + "\n"
+
+        if i != 0 and i % 150 == 0:
+            split.append(msg)
+            msg = ""
+
+    split.append(msg)
+
+    # print(split)
     with Client("sessions/pyrog.session", APP_ID, API_HASH, proxy=dict(hostname='127.0.0.1', port=9050)) as app:
-        app.send_message(user_id, message)
+        for msg in split:
+            if msg != "\n" and msg != "":
+                app.send_message(user_id, msg, parse_mode="html")
 
 
 def instaloader_init():
@@ -658,11 +676,12 @@ def find_assholes():
         \n{ASTERISK*WIDTH}\n"
 
     logger.info(report)
-    msg_cheaters = "CHEATERS: \n\n"
-    for cheater in cheaters:
-        msg_cheaters += (cheater + "\n")
+    # msg_cheaters = "CHEATERS: \n\n"
+    # for cheater in cheaters:
+    #     msg_cheaters += (cheater + "\n")
 
-    telegram_send("me", msg_cheaters)
+    telegram_send("apocalyptical", "BITCHES", bitches)
+    telegram_send("apocalyptical", "CHEATERS", cheaters)
 
     # CLEAN UP
     # dump last warn list and hashtag to file
@@ -829,11 +848,12 @@ def print_last_warn():
             # print("")
 
     print(fancy)
-    telegram_send("me", fancy)
 
     if COMPLETE_EXECUTION:  # write fancy list to report file if find assholes function was called before
         with open(f"logs/report-{HASHTAG}.txt", "a") as af:
             af.write(fancy)
+
+        telegram_send("apocalyptical", "ASSHOLES", fancy)
 
 
 def update_warndb_manually():
