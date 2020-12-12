@@ -182,11 +182,22 @@ def get_followings(usernames, igloader):
     followings = []
 
     logger.info(f"Fetching {usernames} followees...")
-    for username in usernames:
-        profile = Profile.from_username(igloader.context, username)
 
-        for followee in profile.get_followees():
-            followings.append(str(followee.username).lower())
+    try:
+        for username in usernames:
+            profile = Profile.from_username(igloader.context, username)
+            print(f"Fetching {username} followings...")
+            for followee in profile.get_followees():
+                followings.append(str(followee.username).lower())
+
+    except instaloader.QueryReturnedBadRequestException as e:
+        remove_file(SESSION_FILE)
+        logger.exception(f"Exception details:\n {e}")
+        logger.error(
+            f"Bad Request Exception. Probably the account '{USERNAME}' was limited by instagram.\n\
+                    To solve this: First try to *(solve captcha)* from instagram web and *(verify phone number)* and change password if required.\n")
+        telegram_send(TELEGRAM_ID, "Account limited",
+                      f"Account {USERNAME} was limited, solve captcha and when it was no longer limited, press enter")
 
     return list(set(followings))
 
@@ -208,7 +219,7 @@ def get_hashtag_posters(hashtag, loader):
     # try:
     for post in post_iterator:
         try:
-            sleep(round(random.uniform(3.000, 4.500), 3))
+            sleep(round(random.uniform(3.000, 6.500), 3))
             posters.append(post.owner_username)
             print(post.owner_username, "\t", post.date)
             if len(posters) % 50 == 0:
@@ -221,8 +232,12 @@ def get_hashtag_posters(hashtag, loader):
             logger.error(
                 f"Bad Request Exception. Probably the account '{USERNAME}' was limited by instagram.\n\
                     To solve this: First try to *(solve captcha)* from instagram web and *(verify phone number)* and change password if required.\n")
+            telegram_send(TELEGRAM_ID, "Account limited",
+                          f"Account {USERNAME} was limited, solve captcha and when it was no longer limited, press enter")
+
             input(
                 "ONLY when you SOLVED THE CAPTCHA and the account was NO LONGER LIMITED, 'press enter to continiue':  ")
+
             # You can also change -u command line argument to another account to fix this error")
             # sys.exit("Finally if none of above soleved the promlem, Call Support :) and give them this error log\nEXITED 1")
 
@@ -576,6 +591,11 @@ def get_post_likers(shortcode, loader):
                 Well, I guess Instagram limited the Account '{USERNAME} again.\n\
                 Solve the captcha from instagram web and make sure the password is correct.\n\
                 If the problem persisted remove session file '{SESSION_FILE}'.")
+
+        telegram_send(TELEGRAM_ID, "Account limited",
+                          f"Account {USERNAME} was limited while fetching {HASHTAG} posts,\
+                               solve captcha and it will resume automatically")
+
         sys.exit("DO ABOVE ADN RUN AGIAN.\nEXITED 1")
 
     post_likers = []
@@ -680,8 +700,8 @@ def find_assholes():
     # for cheater in cheaters:
     #     msg_cheaters += (cheater + "\n")
 
-    telegram_send("apocalyptical", "BITCHES", bitches)
-    telegram_send("apocalyptical", "CHEATERS", cheaters)
+    telegram_send(TELEGRAM_ID, "BITCHES", bitches)
+    telegram_send(TELEGRAM_ID, "CHEATERS", list(set(cheaters)))
 
     # CLEAN UP
     # dump last warn list and hashtag to file
@@ -853,7 +873,8 @@ def print_last_warn():
         with open(f"logs/report-{HASHTAG}.txt", "a") as af:
             af.write(fancy)
 
-        telegram_send("apocalyptical", "ASSHOLES", fancy)
+        telegram_send(TELEGRAM_ID, "ASSHOLES", fancy)
+        telegram_send(DUDE, "", "ALL COOL")
 
 
 def update_warndb_manually():
