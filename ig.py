@@ -878,7 +878,7 @@ def print_last_warn():
         with open(f"logs/report-{HASHTAG}.txt", "a") as af:
             af.write(fancy)
 
-        telegram_send(TELEGRAM_ID, "ASSHOLES", fancy)
+        telegram_send(TELEGRAM_ID, "ASSHOLES", fancy[2::])
         telegram_send(DUDE, "ALL COOL", len(last_warn_list))
 
 
