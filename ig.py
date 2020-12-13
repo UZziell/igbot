@@ -86,6 +86,10 @@ def get_time():
 
 
 def setup_logging():
+
+    # disable loggin of pyrogram except for errors
+    logging.getLogger('pyrogram').setLevel(logging.ERROR)
+
     global logger
     now = get_time()
 
@@ -140,7 +144,7 @@ def telegram_send(user_id, header, message):
     if isinstance(message, str):
         message = message.splitlines()
 
-    split = [f"<b>#{header} #{HASHTAG}</b> 👇🏼\n"]
+    split = [f"#{header} <b>{HASHTAG}</b> 👇🏼\n"]
     msg = ""
     for i, line in enumerate(message):
         msg += line + "\n"
@@ -152,7 +156,8 @@ def telegram_send(user_id, header, message):
     split.append(msg)
 
     # print(split)
-    with Client("sessions/pyrog.session", APP_ID, API_HASH, proxy=dict(hostname='127.0.0.1', port=9050)) as app:
+    # with Client("sessions/pyrog.session", APP_ID, API_HASH, proxy=dict(hostname='127.0.0.1', port=9050)) as app:
+    with Client("sessions/pyrog.session", APP_ID, API_HASH) as app:
         for msg in split:
             if msg != "\n" and msg != "":
                 app.send_message(user_id, msg, parse_mode="html")
@@ -219,7 +224,7 @@ def get_hashtag_posters(hashtag, loader):
     # try:
     for post in post_iterator:
         try:
-            sleep(round(random.uniform(3.000, 6.500), 3))
+            sleep(round(random.uniform(3.000, 6.900), 3))
             posters.append(post.owner_username)
             print(post.owner_username, "\t", post.date)
             if len(posters) % 50 == 0:
@@ -807,7 +812,7 @@ def load_or_update(client_admins, c_file):
         string = "VIP " + string
 
     if exists(c_file):
-        hour_ago = datetime.now() - timedelta(minutes=120)
+        hour_ago = datetime.now() - timedelta(minutes=300)
         file_epoch = os.path.getmtime(c_file)
         file_mtime = datetime.fromtimestamp(file_epoch)
         if file_mtime > hour_ago:  # if the file was last modified during the last hour, load it
@@ -874,7 +879,7 @@ def print_last_warn():
             af.write(fancy)
 
         telegram_send(TELEGRAM_ID, "ASSHOLES", fancy)
-        telegram_send(DUDE, "", "ALL COOL")
+        telegram_send(DUDE, "ALL COOL", len(last_warn_list))
 
 
 def update_warndb_manually():
