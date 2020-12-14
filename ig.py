@@ -202,7 +202,7 @@ def get_followings(usernames, igloader):
             f"Bad Request Exception. Probably the account '{USERNAME}' was limited by instagram.\n\
                     To solve this: First try to *(solve captcha)* from instagram web and *(verify phone number)* and change password if required.\n")
         telegram_send(TELEGRAM_ID, "Account limited",
-                      f"Account {USERNAME} was limited, solve captcha and when it was no longer limited, press enter")
+                      f"Account {USERNAME} was limited, solve the captcha and run again.")
 
     return list(set(followings))
 
@@ -599,7 +599,7 @@ def get_post_likers(shortcode, loader):
 
         telegram_send(TELEGRAM_ID, "Account limited",
                           f"Account {USERNAME} was limited while fetching {HASHTAG} posts,\
-                               solve captcha and it will resume automatically")
+                               solve captcha and and run the code again. it will resume automatically")
 
         sys.exit("DO ABOVE ADN RUN AGIAN.\nEXITED 1")
 
@@ -705,7 +705,7 @@ def find_assholes():
     # for cheater in cheaters:
     #     msg_cheaters += (cheater + "\n")
 
-    telegram_send(TELEGRAM_ID, "BITCHES", bitches)
+    telegram_send(TELEGRAM_ID, "BITCHES", list(set(bitches)))
     telegram_send(TELEGRAM_ID, "CHEATERS", list(set(cheaters)))
 
     # CLEAN UP
@@ -857,12 +857,15 @@ def print_warning_history():
 
 
 def print_last_warn():
+    global HASHTAG
     vip_clients = load_or_update(VIPS, VIP_CLIENTS_LIST)
     warn_dic = load_from_file(WARN_HISTORY_FILE)
-    last_hashtag = load_from_file(LAST_HASHTAG_STR)
+    # last_hashtag = load_from_file(LAST_HASHTAG_STR)
+    HASHTAG = load_from_file(LAST_HASHTAG_STR)
     last_warn_list = load_from_file(LAST_WARN_LIST)
 
-    fancy = f"\nFancy little list of to-be-warned clients (assholes) for hashtag '{last_hashtag}' excluding VIPs:\n"
+    # fancy = f"\nFancy little list of to-be-warned clients (assholes) for hashtag '{last_hashtag}' excluding VIPs:\n"
+    fancy = "\n"
     psign = "+"
     for client in sorted(last_warn_list):
         if client not in vip_clients:
@@ -878,8 +881,8 @@ def print_last_warn():
         with open(f"logs/report-{HASHTAG}.txt", "a") as af:
             af.write(fancy)
 
-        telegram_send(TELEGRAM_ID, "ASSHOLES", fancy[2::])
-        telegram_send(DUDE, "ALL COOL", len(last_warn_list))
+        telegram_send(TELEGRAM_ID, "ASSHOLES", fancy)
+        telegram_send(DUDE, "ALL COOL", str(len(last_warn_list)))
 
 
 def update_warndb_manually():
