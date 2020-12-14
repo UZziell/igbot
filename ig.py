@@ -2,7 +2,7 @@
 # This script finds clietns that didn't like top3 posts.
 # --------------------------------------------------------------------------
 import argparse
-import json
+# import json
 import logging
 import os
 import pickle
@@ -10,18 +10,19 @@ import random
 import re
 import sys
 from datetime import datetime, timedelta
-from json import dump, load
+# from json import dump, load
 from os.path import exists
 from time import sleep
 
-import jdatetime
+# import jdatetime
 import pysftp
-from pyrogram import Client
 # import requests
 # import selenium
 # from bullet import Bullet, Check, YesNo, Input  # and etc...
 from instaloader import (FrozenNodeIterator, Hashtag, Post, Profile,
                          instaloader, resumable_iteration)
+from pyrogram import Client
+
 # from requests import Timeout
 # from selenium import webdriver
 # from selenium.webdriver import ActionChains
@@ -217,14 +218,14 @@ def get_hashtag_posters(hashtag, loader):
         hashtag = hashtag.replace("#", "")
 
     logger.info(
-        f"Finding posts with hashtag '{hashtag}'. This will take some time to complete! (30-40 minutes for every ~500 posts)")
+        f"Finding posts with hashtag '{hashtag}'. This will take some time to complete! (70-95 minutes for ~800 posts)")
 
     post_iterator = Hashtag.from_name(loader.context, hashtag).get_posts()
 
     # try:
     for post in post_iterator:
         try:
-            sleep(round(random.uniform(3.000, 6.900), 3))
+            sleep(round(random.uniform(3.000, 7.000), 3))
             posters.append(post.owner_username)
             print(post.owner_username, "\t", post.date)
             if len(posters) % 50 == 0:
@@ -598,7 +599,7 @@ def get_post_likers(shortcode, loader):
                 If the problem persisted remove session file '{SESSION_FILE}'.")
 
         telegram_send(TELEGRAM_ID, "Account limited",
-                          f"Account {USERNAME} was limited while fetching {HASHTAG} posts,\
+                      f"Account {USERNAME} was limited while fetching {HASHTAG} posts,\
                                solve captcha and and run the code again. it will resume automatically")
 
         sys.exit("DO ABOVE ADN RUN AGIAN.\nEXITED 1")
@@ -705,8 +706,10 @@ def find_assholes():
     # for cheater in cheaters:
     #     msg_cheaters += (cheater + "\n")
 
-    telegram_send(TELEGRAM_ID, "BITCHES", list(set(bitches)))
-    telegram_send(TELEGRAM_ID, "CHEATERS", list(set(cheaters)))
+    telegram_send(
+        TELEGRAM_ID, f"BITCHES '{len(set(bitches))}'", list(set(bitches)))
+    telegram_send(
+        TELEGRAM_ID, f"CHEATERS '{len(set(cheaters))}'", list(set(cheaters)))
 
     # CLEAN UP
     # dump last warn list and hashtag to file
