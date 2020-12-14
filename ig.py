@@ -1,37 +1,37 @@
 # aajeZzZzZzzzPlus
 # This script finds clietns that didn't like top3 posts.
 # --------------------------------------------------------------------------
+import argparse
 # import json
 import logging
 import os
 import pickle
+import random
+import re
 import sys
-from argparse import ArgumentParser
 from datetime import datetime, timedelta
 # from json import dump, load
 from os.path import exists
-from random import uniform
-from re import findall
 from time import sleep
 
 # import jdatetime
 import pysftp
-import requests
-import selenium
+# import requests
+# import selenium
 # from bullet import Bullet, Check, YesNo, Input  # and etc...
 from instaloader import (FrozenNodeIterator, Hashtag, Post, Profile,
                          instaloader, resumable_iteration)
 from pyrogram import Client
 
-from requests import Timeout
-from selenium import webdriver
-from selenium.webdriver import ActionChains
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
-from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+# from requests import Timeout
+# from selenium import webdriver
+# from selenium.webdriver import ActionChains
+# from selenium.webdriver.common.by import By
+# from selenium.webdriver.common.keys import Keys
+# from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
+# from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
+# from selenium.webdriver.support import expected_conditions as EC
+# from selenium.webdriver.support.ui import WebDriverWait
 
 try:
     from my_secrets import *
@@ -39,7 +39,7 @@ except ImportError:
     sys.exit("Could not find and import secrets file!\nEXITED 1")
 
 # parse command line arguments
-parser = ArgumentParser()
+parser = argparse.ArgumentParser()
 parser.add_argument('-u', '--username', required=True,
                     help="Instagram username to use, REQUIRED")
 parser.add_argument('-p', '--password', required=True,
@@ -225,7 +225,7 @@ def get_hashtag_posters(hashtag, loader):
     # try:
     for post in post_iterator:
         try:
-            sleep(round(uniform(3.000, 7.000), 3))
+            sleep(round(random.uniform(3.000, 7.000), 3))
             posters.append(post.owner_username)
             print(post.owner_username, "\t", post.date)
             if len(posters) % 50 == 0:
@@ -399,7 +399,7 @@ def get_hashtag_posters2(hashtag):
                                 "Forbidden 403, try changing your vpn, resting for 1 minute... (Disconnect/Connect your vpn dude)")
                             sleep_with_print(30)
                         elif response.status_code == 200:  # if the status code was 200, grab the username
-                            username = findall(
+                            username = re.findall(
                                 "@[a-zA-Z0-9_.]*", response.text)
                             # username without the beginning @
                             posters.append(username[0][1:])
@@ -497,7 +497,7 @@ def get_hashtag_posters3(hashtag):
 
         while scroll_position < height - 1500:
             browser.execute_script("window.scrollBy(0,700)")
-            sleep(round(uniform(1.000, 1.500), 3))
+            sleep(round(random.uniform(1.000, 1.500), 3))
             scroll_position = browser.execute_script("return window.scrollY")
 
         load_more_btn = browser.find_element_by_css_selector(
@@ -540,7 +540,7 @@ def get_tagged_posters(username, loader):
     print("TYPE: ", type(post_iterator.freeze()))
     try:
         for post in post_iterator:
-            sleep(round(uniform(1.000, 3.000), 3))
+            sleep(round(random.uniform(1.000, 3.000), 3))
             posters.append(post.owner_username)
             print(post.owner_username, "\t", post.date)
             if len(posters) % 50 == 0:
