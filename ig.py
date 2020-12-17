@@ -10,7 +10,7 @@ from argparse import ArgumentParser
 from datetime import datetime, timedelta
 # from json import dump, load
 from os.path import exists
-from random import uniform
+from random import uniform, choice
 from re import findall
 from time import sleep
 
@@ -162,6 +162,14 @@ def telegram_send(user_id, header, message):
         for msg in split:
             if msg != "\n" and msg != "":
                 app.send_message(user_id, msg, parse_mode="html")
+
+
+def telegram_send_gif(user_id):
+    with Client("sessions/pyrog.session", APP_ID, API_HASH) as app:
+        messages = app.get_history(-1001300601863)
+        gif = choice(messages)
+        app.forward_messages(chat_id=user_id, from_chat_id=-
+                              1001300601863, message_ids=gif.message_id, as_copy=True)
 
 
 def instaloader_init():
@@ -885,7 +893,9 @@ def print_last_warn():
             af.write(fancy)
 
         telegram_send(TELEGRAM_ID, "ASSHOLES", fancy)
-        telegram_send(DUDE, "ALL COOL", str(len(last_warn_list)))
+        telegram_send_gif(TELEGRAM_ID)
+        assholes_cout = len(fancy.split('\n'))
+        telegram_send(DUDE, "ALL COOL", f"{len(last_warn_list)}, fancy={assholes_cout}")
 
 
 def update_warndb_manually():
