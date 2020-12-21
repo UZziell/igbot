@@ -165,18 +165,23 @@ def telegram_send(user_id, header, message):
 
 
 def telegram_send_gif(user_id):
-    with Client("sessions/pyrog.session", APP_ID, API_HASH, proxy=dict(hostname='127.0.0.1', port=9050)) as app:
+    with Client("sessions/pyrog.session", APP_ID, API_HASH) as app:
         # messages = app.get_history(-1001300601863)
         # gif = choice(messages)
         # app.forward_messages(chat_id=user_id, from_chat_id=-
         #                       1001300601863, message_ids=gif.message_id, as_copy=True)
-        for i in range(0,10):
+        for _ in range(0,10):
             try:
                 gif_id = choice(range(2, app.get_history_count(chat_id=-1001300601863)))
                 app.forward_messages(chat_id=user_id, from_chat_id=-1001300601863, message_ids=gif_id, as_copy=True)
                 break
             except Exception:
                 pass
+
+
+def telegram_send_document(user_id, doc):
+    with Client("sessions/pyrog.session", APP_ID, API_HASH) as app:
+        app.send_document(user_id, document=doc)
 
 
 def instaloader_init():
@@ -903,6 +908,7 @@ def print_last_warn():
         telegram_send_gif(TELEGRAM_ID)
         assholes_cout = len(fancy.split('\n'))
         telegram_send(DUDE, "ALL COOL", f"{len(last_warn_list)}, fancy={assholes_cout}")
+        telegram_send_document(DUDE, WARN_HISTORY_FILE)
 
 
 def update_warndb_manually():
