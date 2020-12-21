@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # aajeZzZzZzzzPlus
 # This script finds clietns that didn't like top3 posts.
 # --------------------------------------------------------------------------
