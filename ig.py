@@ -671,7 +671,7 @@ def find_assholes():
     for poster in posters:
         if poster not in clients:
             bitches.append(poster)
-            # posters.remove(poster)   # remove bitches from posters
+            posters.remove(poster)   # remove bitches from posters
         if posters.count(poster) > 1:
             cheaters.append(poster)
             posters.remove(poster)
