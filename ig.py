@@ -893,7 +893,7 @@ def print_last_warn():
     for client in sorted(last_warn_list):
         if client not in vip_clients:
             fancy = fancy + \
-                f"{client} {psign * ((len(warn_dic[client])-1) % 4)}\n"
+                f"{client} {psign * ((len(warn_dic[client])-1) % 3)}\n"
             # if client in warn_dic.keys():
             #     print("+" * (len(warn_dic[client])-1), end='')
             # print("")
