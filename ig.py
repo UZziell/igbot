@@ -59,9 +59,9 @@ ADMINS = ["Improve_2020", "Girlylife.mm", "ghazal.nasiriyan", "karmaroz1",
 VIPS = ["solace.land"]
 
 # HASHTAG = "TAG--" + jdatetime.datetime.now().strftime("%A-%d-%m-%Y--%H-%M")
-HASHTAG = "#خدمات_انلاین_داریم"
+HASHTAG = ""
 TAGGED_PROFILE = "pishraftmikonim"
-TOP3 = ['CIiH8varTJ7', 'CIiHl8ojPF2', 'CIiIO2iFCLc']
+TOP3 = ['', '', '']
 # --------------------------------------------------------------------------
 # Constants (Variables you can't change unless you know what you are doing)
 # PASSWORD = LOGIN_CREDS[USERNAME.lower()]
@@ -72,6 +72,8 @@ LAST_WARN_LIST = "data/last_warning_list"
 CLIENTS_LIST = "data/clients_list"
 VIP_CLIENTS_LIST = "data/VIP_clients_list"
 LAST_HASHTAG_STR = "data/last_hashtag_str"
+TEMP_HASHTAG = "temp/hashtag.str"
+TEMP_TOP3 = "temp/top3.list"
 COMPLETE_EXECUTION = False
 PWD = os.getcwd()
 FIREFOX_DRIVER_PATH = rf"{PWD}/drivers/geckodriver"
@@ -170,12 +172,13 @@ def telegram_send_gif(user_id):
     with Client("sessions/pyrog.session", APP_ID, API_HASH) as app:
         # messages = app.get_history(-1001300601863)
         # gif = choice(messages)
-        # app.forward_messages(chat_id=user_id, from_chat_id=-
-        #                       1001300601863, message_ids=gif.message_id, as_copy=True)
-        for _ in range(0,10):
+        # app.forward_messages(chat_id=user_id, from_chat_id=-1001300601863, message_ids=gif.message_id, as_copy=True)
+        for _ in range(0, 10):
             try:
-                gif_id = choice(range(2, app.get_history_count(chat_id=-1001300601863)))
-                app.forward_messages(chat_id=user_id, from_chat_id=-1001300601863, message_ids=gif_id, as_copy=True)
+                gif_id = choice(
+                    range(2, app.get_history_count(chat_id=-1001300601863)))
+                app.forward_messages(
+                    chat_id=user_id, from_chat_id=-1001300601863, message_ids=gif_id, as_copy=False)
                 break
             except Exception:
                 pass
@@ -247,7 +250,7 @@ def get_hashtag_posters(hashtag, loader):
     # try:
     for post in post_iterator:
         try:
-            sleep(round(uniform(3.000, 7.000), 3))
+            sleep(round(uniform(5.000, 8.000), 3))
             posters.append(post.owner_username)
             print(post.owner_username, "\t", post.date)
             if len(posters) % 50 == 0:
@@ -633,7 +636,7 @@ def get_post_likers(shortcode, loader):
     return post_likers
 
 
-def find_assholes():
+def find_assholes(top_posts):
     """Finds clients that didn't like top posts. First loads or update clients list.
     Then finds all posts with given hashtag. Then finds top-posts likers. 
     Finally finds which client didn't like top-posts at all."""
@@ -645,7 +648,7 @@ def find_assholes():
 
     logger.info(f"Current datetime: {get_time()}")
     logger.debug(f"Inputs: \n\tHashtag: '{HASHTAG}'\n\tAdmins: {ADMINS}\n\tVIP-Admins: {VIPS}\n\
-        \tTop Posts: {TOP3}\n\tAccount: '{USERNAME}'\n\tTagged Profile: '{TAGGED_PROFILE}'")
+        \tThree Posts: {top_posts}\n\tAccount: '{USERNAME}'\n\tTagged Profile: '{TAGGED_PROFILE}'")
 
     # fetch all clients from ADMINS's followings
     clients = load_or_update(ADMINS + VIPS, CLIENTS_LIST)
@@ -684,8 +687,8 @@ def find_assholes():
         f"'{len(posters)}' unique posts from clients:\t{sorted(posters)}")
 
     # find likers of every post and mark those who didn't like them
-    logger.info(f"Fetching posts {TOP3} likes from instagram...")
-    for shortcode in TOP3:
+    logger.info(f"Fetching posts {top_posts} likes from instagram...")
+    for shortcode in top_posts:
         post_likers = get_post_likers(shortcode, L)
         client_post_likers = [
             client for client in post_likers if client in posters]
@@ -698,7 +701,7 @@ def find_assholes():
             if user not in post_likers and user+".hami2020" not in post_likers and user+".lrs" not in post_likers and user+".ikiu" not in post_likers:
                 clients_likes.setdefault(user, 0)
                 clients_likes[user] += 1
-                if clients_likes[user] == len(TOP3):
+                if clients_likes[user] == len(top_posts):
                     assholes.append(user)
         sleep(5)
 
@@ -909,7 +912,8 @@ def print_last_warn():
         telegram_send(TELEGRAM_ID, "ASSHOLES", fancy)
         telegram_send_gif(TELEGRAM_ID)
         assholes_cout = len(fancy.split('\n'))
-        telegram_send(DUDE, "ALL COOL", f"{len(last_warn_list)}, fancy={assholes_cout}")
+        telegram_send(DUDE, "ALL COOL",
+                      f"{len(last_warn_list)}, fancy={assholes_cout}")
         telegram_send_document(DUDE, WARN_HISTORY_FILE)
 
 
@@ -940,65 +944,82 @@ def update_warndb_manually():
         print("Cool. Job canceled and didn't update. Bye.")
 
     # Update last warn file
-    old_last_warning_list = load_from_file(LAST_WARN_LIST)
-    new_last_warning_list = old_last_warning_list.extend(tobe_warned_manual)
-    dump_to_file(new_last_warning_list, LAST_WARN_LIST)
+    old_last_warning = load_from_file(LAST_WARN_LIST)
+    new_last_warning = []
+    new_last_warning.extend(old_last_warning)
+    new_last_warning.extend(tobe_warned_manual)
+    dump_to_file(new_last_warning, LAST_WARN_LIST)
 
 
 def menu():
-    global HASHTAG, COMPLETE_EXECUTION, TAGGED_PROFILE
+    global HASHTAG, COMPLETE_EXECUTION, TAGGED_PROFILE, TOP3
     while True:
+        read_inputs = True
         choices = ["1> Find Assholse\t(Find clients that didn't like posts of a certain hashtag)", "2> Print Warning History\t(History of asshole clients from the beginning of the time)",
-                   "3> Print Last Assholes\t(Print asshole clients (one in each line) of the last search)", "4> Manually Update Warning History (update warning history file manually from a list of input clients)", "5> Exit"]
+                   "3> Print Last Assholes\t(Print asshole clients (one in each line) of the last search)", "4> Manually Update Warning History (update warning history file manually from a list of input clients)",
+                   "5> Exit", "6> Find Assholes with latest inputs (EXPERIMENTAL)"]
 
         print("Main Menu:")
         for choice in choices:
             print(f"  {choice}")
         user_choice = input("Enter number of the job you want to do: ")
 
+        if user_choice == "6":
+            if exists(TEMP_HASHTAG) and exists(TEMP_TOP3):
+                HASHTAG = load_from_file(TEMP_HASHTAG)
+                TOP3 = load_from_file(TEMP_TOP3)
+                user_choice = "1"
+                read_inputs = False
+            else:
+                print("Could not find lastest execution info!!!\n")
+                continue
+
         if user_choice == "1":
-            COMPLETE_EXECUTION = True
-            # input_tag = input(
-            #     f"\n - Enter a tagged user (press enter to skip and use '{TAGGED_PROFILE}' as tagged user): ")
-            input_tag = input(
-                f"\n - Enter n new hashtag (or press enter to skip and use '{HASHTAG}' as tagged user): ")
-            if input_tag != "":
-                HASHTAG = input_tag.strip()
+            if read_inputs:
+                # input_tag = input(
+                #     f"\n - Enter a tagged user (press enter to skip and use '{TAGGED_PROFILE}' as tagged user): ")
+                input_tag = input(
+                    f"\n - Enter n new hashtag (or press enter to skip and use '{HASHTAG}' as tagged user): ")
+                if input_tag != "":
+                    HASHTAG = input_tag.strip()
 
-            nth = {1: "first", 2: "second", 3: "third"}
-            for i in range(0, 3):
-                try:
-                    post_link = input(
-                        f" -- Enter {nth[i+1]} top-post link (press enter to skip and use '{TOP3[i]}' as {nth[i+1]} link): ")
-                    if post_link != "":
-                        TOP3[i] = post_link.split("/")[4]
-                except IndexError:
-                    print(
-                        "Please enter a link that follows this format: https://instagram.com/p/SHORTCODE/...")
-                    sys.exit("Exited 1, Invalid user input!")
+                nth = {1: "first", 2: "second", 3: "third"}
+                for i in range(0, 3):
+                    try:
+                        post_link = input(
+                            f" -- Enter {nth[i+1]} top-post link (press enter to skip and use '{TOP3[i]}' as {nth[i+1]} link): ")
+                        if post_link != "":
+                            TOP3[i] = post_link.split("/")[4]
+                    except IndexError:
+                        print(
+                            "Please enter a link that follows this format: https://instagram.com/p/SHORTCODE/...")
+                        sys.exit("Exited 1, Invalid user input!")
 
-            print(f"Current Inputs: \n\
+            print(f"Current Inputs:\n\
             \tHashtag: '{HASHTAG}'\n\
             \tAdmins: {ADMINS}\n\
             \tVIP-Admins: {VIPS}\n\
-            \tTop Posts: {TOP3}\n\
+            \Three Posts: {TOP3}\n\
             \tAccount: '{USERNAME}'\n\
-            \tTgged profile: '{TAGGED_PROFILE}'")
-            print("")
+            \tTgged profile: '{TAGGED_PROFILE}'\n")
 
             continuee = input(
                 "Are these inputs correct? \n\t1> yes, Proceed\n\t2> no, Exit\nYour choice: ")
             if continuee.lower() == "1" or continuee == "\n":
                 # setup_logging()
-                assholes = find_assholes()
-                update_warndb(assholes)
+                COMPLETE_EXECUTION = True
+                dump_to_file(HASHTAG, TEMP_HASHTAG)
+                dump_to_file(TOP3, TEMP_TOP3)
 
+                assholes = find_assholes(top_posts=TOP3)
+                update_warndb(assholes)
                 print_last_warn()
-                # break
+
+                remove_file(TEMP_HASHTAG)
+                remove_file(TEMP_TOP3)
 
             elif continuee.lower() == "2":
                 print("\nSo edit the inputs and re-run the script! (To edit the Account or Admins or VIP-Admins, manually edit the source file.)")
-                # break
             else:
                 sys.exit("Exited 1, Invalid user input!")
 
@@ -1018,7 +1039,7 @@ def menu():
 
         else:
             print(
-                f"Your choice should be between 1-{len(choices)}! Run the script again and choose wisely.")
+                f"Your choice should be between 1-{len(choices)}! Choose wisely.")
 
         print("")
         for t in range(3, 0, -1):
