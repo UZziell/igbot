@@ -12,18 +12,18 @@ from argparse import ArgumentParser
 from datetime import datetime, timedelta
 # from json import dump, load
 from os.path import exists
-from random import uniform, choice
-from re import findall
+from random import choice
 from time import sleep
 
 # import jdatetime
 import pysftp
 # import requests
 # import selenium
-# from bullet import Bullet, Check, YesNo, Input  # and etc...
-from instaloader import (FrozenNodeIterator, Hashtag, Post, Profile,
-                         instaloader, resumable_iteration)
+# from bullet import Bullet, Check, Input, YesNo  # and etc...
+from instaloader import (Post, Profile, instaloader)
 from pyrogram import Client
+
+from getposters import get_hashtag_posters, get_posters_from_shortcodes
 
 # from requests import Timeout
 # from selenium import webdriver
@@ -72,13 +72,16 @@ LAST_WARN_LIST = "data/last_warning_list"
 CLIENTS_LIST = "data/clients_list"
 VIP_CLIENTS_LIST = "data/VIP_clients_list"
 LAST_HASHTAG_STR = "data/last_hashtag_str"
+DOWNLOAD_PATH = f"temp/{HASHTAG}"
 TEMP_HASHTAG = "temp/hashtag.str"
 TEMP_TOP3 = "temp/top3.list"
+TEMP_SHORTCODES = "temp/_shortcodes.pickle"
+TEMP_POSTERS = "temp/posters.pickle"
 COMPLETE_EXECUTION = False
 PWD = os.getcwd()
 FIREFOX_DRIVER_PATH = rf"{PWD}/drivers/geckodriver"
 FIREFOX_PROFILE_PATH = r"/home/uzziel/.mozilla/firefox/euvy32zo.freshprofile"
-LINKS_TEMP_FILE = "./temp/_links.pickle"
+LINKS_TEMP_FILE = "temp/_links.pickle"
 POSTERS_TEMP_FILE = "./temp/_posters.pickle"
 HEADLESS = False
 # --------------------------------------------------------------------------
@@ -94,14 +97,15 @@ def setup_logging():
 
     # disable loggin of pyrogram except for errors
     logging.getLogger('pyrogram').setLevel(logging.ERROR)
+    # logging.getLogger('foo').addHandler(logging.NullHandler()) # Disables logging of the module
 
     global logger
     now = get_time()
 
     logFormatter = logging.Formatter(
-        "[%(asctime)s]  %(levelname)s - %(message)s")
+        "[%(asctime)s] %(name)s - %(levelname)s - %(message)s")
     logFormatter.datefmt = "%H:%M:%S"
-    logger = logging.getLogger()
+    logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
 
     # INFO - log file handler
@@ -145,7 +149,7 @@ def remove_file(file_path):
 
 
 def telegram_send(user_id, header, message):
-    "Parse message and devide to chunks then send to user_id"
+    "Parse message and split it to chunks then send the message to the @user_id"
     if isinstance(message, str):
         message = message.splitlines()
 
@@ -189,26 +193,25 @@ def telegram_send_document(user_id, doc):
         app.send_document(user_id, document=doc)
 
 
-def instaloader_init():
+def instaloader_init(ig_user=USERNAME, ig_passwd=PASSWORD):
     # Get instance
-    L = instaloader.Instaloader(sleep=True, download_pictures=False, post_metadata_txt_pattern="",
-                                download_geotags=False, save_metadata=False,
-                                download_comments=False, download_videos=False, download_video_thumbnails=False,
-                                rate_controller=lambda ctx: instaloader.RateController(ctx))
+    L = instaloader.Instaloader(dirname_pattern=DOWNLOAD_PATH, sleep=True, download_pictures=False, post_metadata_txt_pattern="", compress_json=False,
+                                download_geotags=False, save_metadata=True,
+                                download_comments=False, download_videos=False, download_video_thumbnails=False)
 
     if not exists(SESSION_FILE):
-        logger.info(f"Logging-in with account '{USERNAME}'...")
-        L.login(USERNAME, PASSWORD)        # (login)
+        logger.info(f"Logging-in with account '{ig_user}'...")
+        L.login(ig_user, ig_passwd)        # (login)
         L.save_session_to_file(filename=SESSION_FILE)
         # L.interactive_login(USER)      # (ask password on terminal)
 
     else:
-        L.load_session_from_file(USERNAME, SESSION_FILE)
+        L.load_session_from_file(ig_user, SESSION_FILE)
 
     return L
 
 
-def get_followings(usernames, igloader):
+def get_followings(usernames, loader):
     """find followings of admin users (subscribed users and VIP users)"""
     followings = []
 
@@ -216,7 +219,7 @@ def get_followings(usernames, igloader):
 
     try:
         for username in usernames:
-            profile = Profile.from_username(igloader.context, username)
+            profile = Profile.from_username(loader.context, username)
             print(f"Fetching {username} followings...")
             for followee in profile.get_followees():
                 followings.append(str(followee.username).lower())
@@ -231,377 +234,6 @@ def get_followings(usernames, igloader):
                       f"Account {USERNAME} was limited, solve the captcha and run again.")
 
     return list(set(followings))
-
-
-def get_hashtag_posters(hashtag, loader):
-    "Find posts from hashtag"
-    # ITTERATOR_TEMP = "temp/frozenNodeIterator.pickle.tmp"
-    # POSTERS_TEMP = "temp/posters.pickle.tmp"
-    posters = []
-
-    if "#" in hashtag:
-        hashtag = hashtag.replace("#", "")
-
-    logger.info(
-        f"Finding posts with hashtag '{hashtag}'. This will take some time to complete! (70-95 minutes for ~800 posts)")
-
-    post_iterator = Hashtag.from_name(loader.context, hashtag).get_posts()
-
-    # try:
-    for post in post_iterator:
-        try:
-            sleep(round(uniform(5.000, 8.000), 3))
-            posters.append(post.owner_username)
-            print(post.owner_username, "\t", post.date)
-            if len(posters) % 50 == 0:
-                print(
-                    f"\t\t\t{get_time()}\tposts found so far: {len(posters)}")
-
-        except instaloader.QueryReturnedBadRequestException as e:
-            remove_file(SESSION_FILE)
-            logger.exception(f"Exception details:\n {e}")
-            logger.error(
-                f"Bad Request Exception. Probably the account '{USERNAME}' was limited by instagram.\n\
-                    To solve this: First try to *(solve captcha)* from instagram web and *(verify phone number)* and change password if required.\n")
-            telegram_send(TELEGRAM_ID, "Account limited",
-                          f"Account {USERNAME} was limited, solve captcha and when it was no longer limited, press enter")
-
-            input(
-                "ONLY when you SOLVED THE CAPTCHA and the account was NO LONGER LIMITED, 'press enter to continiue':  ")
-
-            # You can also change -u command line argument to another account to fix this error")
-            # sys.exit("Finally if none of above soleved the promlem, Call Support :) and give them this error log\nEXITED 1")
-
-        except Exception as e:
-            logger.error(
-                f"Exception in fetching posts from instagram, EXITED\n Details: {e}")
-            sys.exit(
-                "Probably your internet was disconnected, 'Try to run again!!' \nEXITED 1")
-    # except KeyboardInterrupt as e:
-    #     logger.error(f"keyboardInterrupt, \n Details: {e}")
-    #     sys.exit("User interrupted execution.\n EXITED 1")
-
-    return posters
-
-
-def firefox_builder():
-    # binary = FirefoxBinary(FIREFOX_BINARY_PATH)
-    profile = FirefoxProfile(FIREFOX_PROFILE_PATH)
-
-    # apply the setting under (A) to ALL new windows (even script windows with features)
-    profile.set_preference("browser.link.open_newwindow.restriction", 0)
-    # open external links in a new window
-    profile.set_preference("browser.link.open_newwindow.override.external", 2)
-    # divert new window to a new tab
-    profile.set_preference("browser.link.open_newwindow", 3)
-    ##
-    profile.set_preference("network.http.connection-timeout", 5)
-    profile.set_preference("network.http.response.timeout", 5)
-    profile.set_preference("dom.max_script_run_time", 5)
-    # profile.set_preference("network.http.connection-retry-timeout", 15)
-    ##
-    # profile.update_preferences()
-    opts = webdriver.firefox.options.Options()
-    opts.headless = HEADLESS
-
-    # browser = webdriver.Firefox(firefox_binary=binary, options=opts, firefox_profile=profile, executable_path=FIREFOX_DRIVER_PATH)
-    browser = webdriver.Firefox(
-        options=opts, firefox_profile=profile, executable_path=FIREFOX_DRIVER_PATH)
-    browser.set_window_size(700, 700)
-    browser.get("about:config")
-
-    return browser
-
-
-def sleep_with_print(seconds):
-    for _ in range(seconds, 0, -1):
-        print(f"{_} \r", end="")
-        sleep(1)
-    print("          ")
-
-
-def get_hashtag_posters2(hashtag):
-    """Find hashtag posters using webdriver from https://picuki.com"""
-    posters = []
-    links = {}
-    double_check = {}
-
-    if hashtag[0] == "#":
-        hashtag = hashtag.replace("#", "")
-
-    # if temp files existed, load and skip loading from websites
-    if os.path.exists(POSTERS_TEMP_FILE) and os.path.exists(LINKS_TEMP_FILE):
-        posters = load_from_file(POSTERS_TEMP_FILE)
-        links = load_from_file(LINKS_TEMP_FILE)
-        logger.info("Loaded links from file.")
-
-    # if temp files didn't exist, load from website
-    else:
-        browser = firefox_builder()
-        logger.info("Connect your VPN")
-        sleep_with_print(10)
-        # preventing browser.get hang
-        # browser.set_script_timeout(0)
-        # browser.set_page_load_timeout(5)
-
-        logger.info(
-            f"Finding posts with hashtag '{hashtag}'. This will take some time")
-        reload = True
-        while reload:
-            try:
-                browser.get(f"https://www.picuki.com/tag/{hashtag}")
-                # browser.get(f"https://gramho.com/explore-hashtag/{hashtag}")
-                reload = False
-
-                assert "Instagram" in browser.title, "Could not load main page properly. Make sure VPN is connected"
-            except selenium.common.exceptions.WebDriverException as e:
-                if "Failed to decode response from marionette" in e.msg:
-                    logger.exception(
-                        "Something's wrong with browser, Is it even open?")
-                    sys.exit(1)
-                else:
-                    logger.error(
-                        "Could not load posts page. Make sure VPN is connected. Retrying in...")
-                    sleep_with_print(4)
-            except Exception as e:
-                logger.error(
-                    "Could not load posts page. Make sure VPN is connected. Retrying...")
-        # find total number of posts
-        total_post_element = browser.find_element_by_css_selector(
-            "html body div.wrapper div.content div.content-header.tag-page.clearfix div.content-title div.content-subtitle")
-        total_posts = int(total_post_element.text.split(" ")[0])
-        logger.info(f"Total posts in theory = {total_posts}")
-
-        # Scroll down to load all the posts
-        body_element = browser.find_element_by_tag_name('body')
-        for _ in range(1, int(total_posts / 10)+1):
-            print(
-                f"Loading more posts. Attempt {_}/{int(total_posts / 10)}\r", end="")
-            browser.execute_script(
-                "window.scrollTo(0, document.body.scrollHeight);")
-            sleep(1)
-            for _ in range(0, 15):
-                body_element.send_keys(Keys.ARROW_UP)
-            sleep(3)
-            # body_element.send_keys(Keys.END)
-            # sleep(5)
-            # body_element.send_keys(Keys.END)
-            # body_element.send_keys(Keys.ARROW_UP)
-            # body_element.send_keys(Keys.HOME)
-            # sleep(0.3)
-        # save post link to `links`
-        posts_elements = browser.find_elements_by_css_selector(
-            "html body div.wrapper div.content.box-photos-wrapper ul.box-photos.clearfix li div.box-photo div.photo a")
-        for post in posts_elements:
-            link = post.get_attribute("href")
-            # visit status, True: link already visited - False: link not visited
-            links.setdefault(link, False)
-
-        # Save loaded posts to file
-        dump_to_file(links, LINKS_TEMP_FILE)
-        dump_to_file(posters, POSTERS_TEMP_FILE)
-        browser.quit()
-
-    logger.info(f"Total posts found in action: '{len(links)}'")
-    while False in links.values():  # while there is a link that is not visited:
-        with requests.session() as session:  # open a requests.session
-            for link, visited in links.items():
-                if not visited:
-                    try:
-                        # response = requests.get(link, timeout=5)
-                        response = session.get(link, timeout=5)  # get the link
-                        if response.status_code == 404:
-                            double_check.setdefault(link, 0)
-                            double_check[link] += 1
-                            logger.error(
-                                f"Post not found '{link}', double_check status: {double_check[link]}/3")
-                            if double_check[link] == 3:
-                                logger.info(
-                                    f"Marking link '{link}' as visited after three 404 responses.")
-                                links[link] = True
-                        elif response.status_code == 403:
-                            logger.error(
-                                "Forbidden 403, try changing your vpn, resting for 1 minute... (Disconnect/Connect your vpn dude)")
-                            sleep_with_print(30)
-                        elif response.status_code == 200:  # if the status code was 200, grab the username
-                            username = findall(
-                                "@[a-zA-Z0-9_.]*", response.text)
-                            # username without the beginning @
-                            posters.append(username[0][1:])
-                            print(username[0])
-                            links[link] = True
-                    except KeyboardInterrupt:
-                        dump_to_file(links, LINKS_TEMP_FILE)
-                        dump_to_file(posters, POSTERS_TEMP_FILE)
-                        logger.info("Keyboard Interrupt!")
-                        sys.exit(1)
-                    except (ConnectionError, Timeout):
-                        logger.error(
-                            "Connection Timeout or Error, Check VPN. Retrying in...")
-                        sleep_with_print(5)
-                    except Exception as e:
-                        dump_to_file(links, LINKS_TEMP_FILE)
-                        dump_to_file(posters, POSTERS_TEMP_FILE)
-
-                    # Rest
-                    if posters and len(posters) % 50 == 0:
-                        print(
-                            f"\t\t\t{get_time()}\tPosts so far: {len(posters)}, Resting 1 minute...")
-                    #     sleep_with_print(60)
-                    # elif posters and len(posters) % 20 == 0:
-                    #     print("\t\t\tResting for 1/2 minute...")
-                    #     sleep_with_print(30)
-
-    # Double check links and remove temporary files if all links are visited
-    for link, visited in links.items():
-        if not visited:
-            logger.info(f"link '{link}' is not visited yet.")
-    if not (False in links.values()):
-        remove_file(POSTERS_TEMP_FILE)
-        remove_file(LINKS_TEMP_FILE)
-
-    return posters
-
-
-def get_hashtag_posters3(hashtag):
-    posters = []
-    links = {}
-    total_posts = 600
-
-    if "#" in hashtag:
-        hashtag = hashtag.replace("#", "")
-
-    browser = firefox_builder()
-    logger.info("Connect your VPN")
-    sleep_with_print(10)
-
-    logger.info(
-        f"Finding posts with hashtag '{hashtag}'. This will take some time")
-    reload = True
-    while reload:
-        try:
-            # find total number of posts
-            browser.get(f"https://www.picuki.com/tag/{hashtag}")
-            total_post_element = browser.find_element_by_css_selector(
-                "html body div.wrapper div.content div.content-header.tag-page.clearfix div.content-title div.content-subtitle")
-            total_posts = int(total_post_element.text.split(" ")[0])
-            logger.info(f"Total posts in theory = {total_posts}")
-
-            browser.get(f"https://www.stalkhub.com/tag/{hashtag}/")
-            reload = False
-
-            assert "Instagram" in browser.title, "Could not load main page properly. Make sure VPN is connected"
-        except selenium.common.exceptions.WebDriverException as e:
-            if "Failed to decode response from marionette" in e.msg:
-                logger.exception(
-                    "Something's wrong with browser, Is it even open?")
-                sys.exit(1)
-            else:
-                logger.error(
-                    "Could not load posts page. Make sure VPN is connected. Retrying in...")
-                sleep_with_print(4)
-        except Exception as e:
-            logger.error(
-                "Could not load posts page. Make sure VPN is connected. Retrying...")
-
-    browser.find_element_by_css_selector(
-        ".search-area > form:nth-child(1) > input:nth-child(1)").send_keys(hashtag)
-    browser.find_element_by_partial_link_text("Tags").click()
-    browser.find_element_by_partial_link_text(hashtag).click()
-
-    # top_posts = browser.find_element_by_css_selector(
-    #     "html.wf-roboto-n4-active.wf-roboto-n5-active.wf-roboto-n7-active.wf-roboto-n9-active.wf-active body div.general-card-list.hastag-ranked-card-list div.container")
-    # top_posters = top_posts.find_elements_by_class_name("user-name")
-
-    # Scroll down to load all the posts
-    for _ in range(1, int(total_posts / 10)+1):
-        print(
-            f"Loading more posts. Attempt {_}/{int(total_posts / 10)}\r", end="")
-        height = browser.execute_script("return document.body.scrollHeight")
-        scroll_position = browser.execute_script("return window.scrollY")
-
-        while scroll_position < height - 1500:
-            browser.execute_script("window.scrollBy(0,700)")
-            sleep(round(uniform(1.000, 1.500), 3))
-            scroll_position = browser.execute_script("return window.scrollY")
-
-        load_more_btn = browser.find_element_by_css_selector(
-            "html.wf-roboto-n4-active.wf-roboto-n5-active.wf-roboto-n7-active.wf-roboto-n9-active.wf-active body div#getRecentData.general-card-list.load-more-area div.container div.button-area button#loadMoreButton.next-button")
-
-        ActionChains(browser).move_to_element(load_more_btn).click().perform()
-        sleep(4)
-
-    posts_elements = browser.find_elements_by_css_selector(
-        "html body div.wrapper div.content.box-photos-wrapper ul.box-photos.clearfix li div.box-photo div.photo a")
-    for post in posts_elements:
-        link = post.get_attribute("href")
-        # visit status, True: link already visited - False: link not visited
-        links.setdefault(link, False)
-
-    browser.quit()
-
-    return posters
-
-
-def get_tagged_posters(username, loader):
-    """Find posters that tagged a username"""
-    ITTERATOR_TEMP = "temp/frozenNodeIterator.pickle.tmp"
-    POSTERS_TEMP = "temp/posters.pickle.tmp"
-    posters = []
-
-    logger.info(
-        f"Finding posts that user '{username}' was tagged in. This will take some time to complete! (25-35 minutes for every ~500 posts)")
-
-    profile = Profile.from_username(loader.context, username)
-    post_iterator = profile.get_tagged_posts()
-
-    if exists(ITTERATOR_TEMP):
-        loded_itr = load_from_file(ITTERATOR_TEMP)
-        posters = load_from_file(POSTERS_TEMP)
-        logger.info(
-            f"Loaded post-itterator and {len(posters)} posts from file, continuing...")
-        post_iterator.thaw(loded_itr)
-
-    print("TYPE: ", type(post_iterator.freeze()))
-    try:
-        for post in post_iterator:
-            sleep(round(uniform(1.000, 3.000), 3))
-            posters.append(post.owner_username)
-            print(post.owner_username, "\t", post.date)
-            if len(posters) % 50 == 0:
-                print(
-                    f"\t\t\t{get_time()}\tposts found so far: {len(posters)}")
-    except KeyboardInterrupt as e:
-        dump_to_file(post_iterator.freeze(), ITTERATOR_TEMP)
-        dump_to_file(posters, POSTERS_TEMP)
-
-        logger.error(
-            f"keyboardInterrupt, dummped posters found so far to file. EXITED\n Details: {e}")
-        sys.exit("User interrupted execution.\n EXITED 1")
-    except instaloader.QueryReturnedBadRequestException as e:
-        dump_to_file(post_iterator.freeze(), ITTERATOR_TEMP)
-        dump_to_file(posters, POSTERS_TEMP)
-        remove_file(SESSION_FILE)
-
-        logger.exception(f"Exception details:\n {e}")
-        logger.error(
-            f"Bad Request Exception. Probably the account '{USERNAME}' was limited by instagram.\n\
-                To solve this: First try to *(solve captcha)* from instagram web and *(verify phone number)* and change password if required.\n\
-                You can also change -u command line argument to another account to fix this error")
-        sys.exit("\nEXITED 1")
-
-    except Exception as e:
-        dump_to_file(post_iterator.freeze(), ITTERATOR_TEMP)
-        dump_to_file(posters, POSTERS_TEMP)
-
-        logger.error(
-            f"Exception in fetching posts from instagram, EXITED\n Details: {e}")
-        sys.exit(
-            "Probably your internet was disconnected, 'Try to run again!!' \nEXITED 1")
-
-    remove_file(ITTERATOR_TEMP)
-    remove_file(POSTERS_TEMP)
-    return posters
 
 
 def get_post_likers(shortcode, loader):
@@ -638,7 +270,7 @@ def get_post_likers(shortcode, loader):
 
 def find_assholes(top_posts):
     """Finds clients that didn't like top posts. First loads or update clients list.
-    Then finds all posts with given hashtag. Then finds top-posts likers. 
+    Then finds all posts with given hashtag. Then finds top-posts likers.
     Finally finds which client didn't like top-posts at all."""
 
     bitches = []    # users that posted the hashtag but aren't clients
@@ -661,7 +293,8 @@ def find_assholes(top_posts):
     if exists(POSTERS_TEMP_FILE+"_"):
         posters = load_from_file(POSTERS_TEMP_FILE+"_")
     else:
-        posters = get_hashtag_posters(HASHTAG, L)
+        posters = get_posters_from_shortcodes(HASHTAG, loader=L)
+        # posters = get_hashtag_posters(HASHTAG, L)
         # posters = get_tagged_posters(TAGGED_PROFILE, L)
         # posters = get_hashtag_posters2(HASHTAG)
         dump_to_file(posters, POSTERS_TEMP_FILE+"_")
@@ -960,8 +593,8 @@ def menu():
                    "5> Exit", "6> Find Assholes with latest inputs (EXPERIMENTAL)"]
 
         print("Main Menu:")
-        for choice in choices:
-            print(f"  {choice}")
+        for option in choices:
+            print(f"  {option}")
         user_choice = input("Enter number of the job you want to do: ")
 
         if user_choice == "6":
@@ -999,7 +632,7 @@ def menu():
             \tHashtag: '{HASHTAG}'\n\
             \tAdmins: {ADMINS}\n\
             \tVIP-Admins: {VIPS}\n\
-            \Three Posts: {TOP3}\n\
+            \tThree Posts: {TOP3}\n\
             \tAccount: '{USERNAME}'\n\
             \tTgged profile: '{TAGGED_PROFILE}'\n")
 
@@ -1052,35 +685,7 @@ if __name__ == "__main__":
     setup_logging()
     menu()
 
-    # # MANUALLY UPDATE WARN_HISTORY FROM FILE
-    # with open("manual", "r") as rf:
-    #     lizt = rf.readlines()
-    #     tobe_warnned = []
-    #     HASHTAG = ""
-    #     for i in lizt:
-    #         if "#" in i:
-    #             HASHTAG = i.strip()[1:]
-    #         elif i != "\n":
-    #             tobe_warnned.append(i.strip().split()[0])
-    #         elif i == "\n":
-    #             print(f"hashtag: '{HASHTAG}'\n  {tobe_warnned}\n\n")
-    #             update_warndb(tobe_warnned)
-    #             tobe_warnned = []
-    #             HASHTAG = ""
-
-    # bitches = []
-    # cheaters = []
-    # assholes = []
-
     # with open(WARN_HISTORY_FILE, 'rb') as dbfile:
     #     warn_dic = pickle.load(dbfile)
     # for client in sorted(warn_dic):
     #         print(client, warn_dic[client])
-
-    # main_menu = Bullet(prompt="Choose one and press enter:",
-    #                    choices=choices)  # Create a Bullet or Check object
-    # result = main_menu.launch()  # Launch a prompt
-
-    # if result == choices[1]:
-    #     print_warning_history()
-    # elif result == choices[0]:
