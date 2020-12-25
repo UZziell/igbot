@@ -1,25 +1,41 @@
 import logging
 import os
 import sys
+import shutil
 from json import load
 from os import listdir
 from os.path import exists
 from random import uniform
 from time import sleep
-# from re import findall
 
 from instaloader import (FrozenNodeIterator, Hashtag, Post, Profile,
                          instaloader, instaloadercontext, resumable_iteration)
+from pyrogram.methods.messages.download_media import DownloadMedia
 
-from ig import (HASHTAG, LOGIN_CREDS, SESSION_FILE, TELEGRAM_ID, USERNAME, DOWNLOAD_PATH,
-                BACKUP_USERNAME, dump_to_file, get_time, instaloader_init, load_from_file,
-                remove_file, telegram_send)
+# from my_secrets import BACKUP_USERNAME, LOGIN_CREDS, TELEGRAM_ID
+from ig import (BACKUP_USERNAME, DOWNLOAD_PATH, HASHTAG, LOGIN_CREDS,
+                SESSION_FILE, TELEGRAM_ID, USERNAME, dump_to_file, get_time,
+                instaloader_init, load_from_file, remove_file, telegram_send)
+
+# from re import findall
+# from requests import Timeout
+# from selenium import webdriver
+# from selenium.webdriver import ActionChains
+# from selenium.webdriver.common.by import By
+# from selenium.webdriver.common.keys import Keys
+# from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
+# from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
+# from selenium.webdriver.support import expected_conditions as EC
+# from selenium.webdriver.support.ui import WebDriverWait
 
 
 logger = logging.getLogger(__name__)
 logFormatter = logging.Formatter(
     "[%(asctime)s] %(name)s - %(levelname)s - %(message)s")
 logFormatter.datefmt = "%H:%M:%S"
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 # console log stream hanlder
 consoleHandler = logging.StreamHandler()
 consoleHandler.setFormatter(logFormatter)
@@ -44,8 +60,8 @@ def get_posters_from_shortcodes(hashtag: str, loader: instaloadercontext) -> lis
     if exists(TEMP_SHORTCODES) and exists(TEMP_POSTERS):
         posters = load_from_file(TEMP_POSTERS)
         shortcodes = load_from_file(TEMP_SHORTCODES)
-        logger.info(
-            f"Found temp files. Loaded '{len(posters)}' posters, resuming")
+        logger.info(f"Found temp files. Resuming...\
+            posts found so far: {len(posters)}")
 
     else:
         for post in instaloader.Hashtag.from_name(loader.context, hashtag).get_posts():
@@ -58,21 +74,19 @@ def get_posters_from_shortcodes(hashtag: str, loader: instaloadercontext) -> lis
                 shortcode = post["node"]["shortcode"]
                 shortcodes.setdefault(shortcode, False)
 
-    # print(shortcodes)
-    not_visited = len(x for x, visited in shortcodes.items() if not visited)
-    logger.info(f"Found '{len(shortcodes)}' posts. {not_visited} not visited.")
+    not_visited = [x for x,visited in shortcodes.items() if not visited]
+    logger.info(f"'{len(shortcodes)}' posts. not visited = {len(not_visited)}.")
 
-    # while False in shortcodes.values():  # while there is a shortcode that is not visited:
     for shortcode, visited in shortcodes.items():
         if not visited:
             try:
                 post = Post.from_shortcode(loader.context, shortcode=shortcode)
                 sleep(round(uniform(0.700, 1.500), 3))
                 posters.append(post.owner_username)
-                print(post.owner_username, "\t", post.date)
+                print(f"{post.owner_username:<30}UTC {post.date}")
                 shortcodes[shortcode] = True
                 if len(posters) % 50 == 0:
-                    print(f"\t\t\t\tposts found so far: {len(posters)}")
+                    print(f"{get_time():>50}\tposts found so far: {len(posters)}")
 
             except Exception as e:
                 remove_file(SESSION_FILE)
@@ -89,9 +103,7 @@ def get_posters_from_shortcodes(hashtag: str, loader: instaloadercontext) -> lis
                 dump_to_file(shortcodes, TEMP_SHORTCODES)
                 dump_to_file(posters, TEMP_POSTERS)
                 logger.error("keyboardInterrupt. Saved posters and shortcodes")
-
-                logger.info("")
-                break
+                sys.exit("Exited 1")
 
     # Double check shortcodes and remove temporary files if all shortcodes are visited
     for shortcode, visited in shortcodes.items():
@@ -100,7 +112,7 @@ def get_posters_from_shortcodes(hashtag: str, loader: instaloadercontext) -> lis
 
     remove_file(TEMP_POSTERS)
     remove_file(TEMP_SHORTCODES)
-    os.rmdir(DOWNLOAD_PATH)
+    shutil.rmtree(DOWNLOAD_PATH)
 
     return posters
 
