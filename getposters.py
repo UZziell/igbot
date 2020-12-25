@@ -12,7 +12,7 @@ from instaloader import (FrozenNodeIterator, Hashtag, Post, Profile,
                          instaloader, instaloadercontext, resumable_iteration)
 
 from ig import (HASHTAG, LOGIN_CREDS, SESSION_FILE, TELEGRAM_ID, USERNAME, DOWNLOAD_PATH,
-                dump_to_file, get_time, instaloader_init, load_from_file,
+                BACKUP_USERNAME, dump_to_file, get_time, instaloader_init, load_from_file,
                 remove_file, telegram_send)
 
 
@@ -83,7 +83,7 @@ def get_posters_from_shortcodes(hashtag: str, loader: instaloadercontext) -> lis
                 logger.info(
                     "Saved posters and shortcodes. Trying to switch account...")
                 loader = instaloader_init(
-                    ig_user="hamzeh_jmoh", ig_passwd=LOGIN_CREDS["hamzeh_jmoh"])
+                    ig_user=BACKUP_USERNAME, ig_passwd=LOGIN_CREDS[BACKUP_USERNAME])
 
             except KeyboardInterrupt:
                 dump_to_file(shortcodes, TEMP_SHORTCODES)
