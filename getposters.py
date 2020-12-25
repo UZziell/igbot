@@ -1,21 +1,21 @@
+import functools
 import logging
 import os
-import sys
 import shutil
+import sys
 from json import load
 from os import listdir
 from os.path import exists
 from random import uniform
-from time import sleep
+from time import perf_counter, sleep
 
 from instaloader import (FrozenNodeIterator, Hashtag, Post, Profile,
                          instaloader, instaloadercontext, resumable_iteration)
-from pyrogram.methods.messages.download_media import DownloadMedia
 
 # from my_secrets import BACKUP_USERNAME, LOGIN_CREDS, TELEGRAM_ID
-from ig import (BACKUP_USERNAME, DOWNLOAD_PATH, HASHTAG, LOGIN_CREDS,
-                SESSION_FILE, TELEGRAM_ID, USERNAME, dump_to_file, get_time,
-                instaloader_init, load_from_file, remove_file, telegram_send)
+from ig import (DOWNLOAD_PATH, LOGIN_CREDS, SESSION_FILE, TELEGRAM_ID,
+                USERNAME, dump_to_file, get_time, instaloader_init,
+                load_from_file, remove_file, telegram_send)
 
 # from re import findall
 # from requests import Timeout
@@ -48,9 +48,24 @@ TEMP_SHORTCODES = "./temp/_shortcodes.pickle"
 TEMP_POSTERS = "./temp/__posters.pickle"
 
 
+def timer(func):
+    """Print the runtime of the decorated function"""
+    @functools.wraps(func)
+    def wrapper_timer(*args, **kwargs):
+        start_time = perf_counter()    # 1
+        value = func(*args, **kwargs)
+        end_time = perf_counter()      # 2
+        run_time = end_time - start_time    # 3
+        print(f"Finished {func.__name__!r} in {run_time:.4f} secs")
+        return value
+    return wrapper_timer
+
+@timer
 def get_posters_from_shortcodes(hashtag: str, loader: instaloadercontext) -> list:
     shortcodes = {}
     posters = []
+
+    limited_accounts = [USERNAME]
 
     if "#" in hashtag:
         hashtag = hashtag.replace("#", "")
@@ -74,8 +89,9 @@ def get_posters_from_shortcodes(hashtag: str, loader: instaloadercontext) -> lis
                 shortcode = post["node"]["shortcode"]
                 shortcodes.setdefault(shortcode, False)
 
-    not_visited = [x for x,visited in shortcodes.items() if not visited]
-    logger.info(f"'{len(shortcodes)}' posts. not visited = {len(not_visited)}.")
+    not_visited = [x for x, visited in shortcodes.items() if not visited]
+    logger.info(
+        f"'{len(shortcodes)}' posts. not visited = {len(not_visited)}.")
 
     for shortcode, visited in shortcodes.items():
         if not visited:
@@ -88,16 +104,42 @@ def get_posters_from_shortcodes(hashtag: str, loader: instaloadercontext) -> lis
                 if len(posters) % 50 == 0:
                     print(f"{get_time():>50}\tposts found so far: {len(posters)}")
 
+            # except instaloader.QueryReturnedBadRequestException as e:
+            #     remove_file(SESSION_FILE)
+            #     dump_to_file(shortcodes, TEMP_SHORTCODES)
+            #     dump_to_file(posters, TEMP_POSTERS)
+            #     logger.error(
+            #         f"Bad Request Exception. Probably the account '{USERNAME}' was limited by instagram.\n\
+            #             To solve this: First try to *(solve captcha)* from instagram web and *(verify phone number)* and change password if required.\n")
+            #     telegram_send(TELEGRAM_ID, "Account limited",
+            #                 f"Account {USERNAME} was limited, solve captcha and when it was no longer limited, press enter")
+
             except Exception as e:
                 remove_file(SESSION_FILE)
                 dump_to_file(shortcodes, TEMP_SHORTCODES)
                 dump_to_file(posters, TEMP_POSTERS)
-                logger.error(f"Exception while fetching posters! Details: {e}")
 
+                logger.error(f"Exception while fetching posters! Details: {e}")
                 logger.info(
                     "Saved posters and shortcodes. Trying to switch account...")
-                loader = instaloader_init(
-                    ig_user=BACKUP_USERNAME, ig_passwd=LOGIN_CREDS[BACKUP_USERNAME])
+
+                for uname in LOGIN_CREDS.keys():
+                    if uname not in limited_accounts:
+                        limited_accounts.append(uname)
+                        logger.info(
+                            f"Switched to account {uname}. Go to login activity and 'click This Was Me'")
+                        loader = instaloader_init(
+                            ig_user=uname, ig_passwd=LOGIN_CREDS[uname])
+                        break
+
+                else:
+                    logger.info(
+                        "All accounts were limited. 1. solve the captcha 2. change password if needed. Then press ENTER to login interactively")
+                    uname = input("enter instagram username: ")
+                    loader = instaloader.Instaloader(filename_pattern="{date_utc:%Y-%m-%d_%H-%M-%S}-{shortcode}", sleep=True,
+                                                     download_pictures=False, post_metadata_txt_pattern="", compress_json=False, download_geotags=False,
+                                                     save_metadata=True, download_comments=False, download_videos=False, download_video_thumbnails=False)
+                    loader.interactive_login(uname)
 
             except KeyboardInterrupt:
                 dump_to_file(shortcodes, TEMP_SHORTCODES)
