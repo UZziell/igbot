@@ -23,17 +23,7 @@ import pysftp
 from instaloader import (Post, Profile, instaloader)
 from pyrogram import Client
 
-from getposters import get_hashtag_posters, get_posters_from_shortcodes
-
-# from requests import Timeout
-# from selenium import webdriver
-# from selenium.webdriver import ActionChains
-# from selenium.webdriver.common.by import By
-# from selenium.webdriver.common.keys import Keys
-# from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
-# from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
-# from selenium.webdriver.support import expected_conditions as EC
-# from selenium.webdriver.support.ui import WebDriverWait
+from getposters import *
 
 try:
     from my_secrets import *
@@ -66,23 +56,23 @@ TOP3 = ['', '', '']
 # Constants (Variables you can't change unless you know what you are doing)
 # PASSWORD = LOGIN_CREDS[USERNAME.lower()]
 SESSION_FILE = f"sessions/{USERNAME}-SESSION"
-WARN_HISTORY_FILE = "data/warn_history.pickle"
 WARN_HISTORY_REMOTE_PATH = "/littleuzer/ig/warn_history.pickle"
+WARN_HISTORY_FILE = "data/warn_history.pickle"
 LAST_WARN_LIST = "data/last_warning_list"
 CLIENTS_LIST = "data/clients_list"
 VIP_CLIENTS_LIST = "data/VIP_clients_list"
 LAST_HASHTAG_STR = "data/last_hashtag_str"
-DOWNLOAD_PATH = f"temp/{HASHTAG}"
+DOWNLOAD_PATH = f"temp/DOWNLOADED"
 TEMP_HASHTAG = "temp/hashtag.str"
 TEMP_TOP3 = "temp/top3.list"
 TEMP_SHORTCODES = "temp/_shortcodes.pickle"
 TEMP_POSTERS = "temp/posters.pickle"
+LINKS_TEMP_FILE = "temp/_links.pickle"
+POSTERS_TEMP_FILE = "./temp/_posters.pickle"
 COMPLETE_EXECUTION = False
 PWD = os.getcwd()
 FIREFOX_DRIVER_PATH = rf"{PWD}/drivers/geckodriver"
 FIREFOX_PROFILE_PATH = r"/home/uzziel/.mozilla/firefox/euvy32zo.freshprofile"
-LINKS_TEMP_FILE = "temp/_links.pickle"
-POSTERS_TEMP_FILE = "./temp/_posters.pickle"
 HEADLESS = False
 # --------------------------------------------------------------------------
 
@@ -153,7 +143,7 @@ def telegram_send(user_id, header, message):
     if isinstance(message, str):
         message = message.splitlines()
 
-    split = [f"#{header} <b>{HASHTAG}</b> 👇🏼\n"]
+    split = [f"#{header} <b>{HASHTAG}</b> 👇🏼"]
     msg = ""
     for i, line in enumerate(message):
         msg += line + "\n"
@@ -195,9 +185,9 @@ def telegram_send_document(user_id, doc):
 
 def instaloader_init(ig_user=USERNAME, ig_passwd=PASSWORD):
     # Get instance
-    L = instaloader.Instaloader(dirname_pattern=DOWNLOAD_PATH, sleep=True, download_pictures=False, post_metadata_txt_pattern="", compress_json=False,
-                                download_geotags=False, save_metadata=True,
-                                download_comments=False, download_videos=False, download_video_thumbnails=False)
+    L = instaloader.Instaloader(dirname_pattern=DOWNLOAD_PATH, filename_pattern="{date_utc:%Y-%m-%d_%H-%M-%S}-{shortcode}", sleep=True,
+                                download_pictures=False, post_metadata_txt_pattern="", compress_json=False, download_geotags=False,
+                                save_metadata=True, download_comments=False, download_videos=False, download_video_thumbnails=False)
 
     if not exists(SESSION_FILE):
         logger.info(f"Logging-in with account '{ig_user}'...")
@@ -368,6 +358,7 @@ def find_assholes(top_posts):
         TELEGRAM_ID, f"BITCHES '{len(set(bitches))}'", list(set(bitches)))
     telegram_send(
         TELEGRAM_ID, f"CHEATERS '{len(set(cheaters))}'", list(set(cheaters)))
+    telegram_send(DUDE, f"total {total} | bitches {len(set(bitches))} | cheaters {len(set(cheaters))}", "")
 
     # CLEAN UP
     # dump last warn list and hashtag to file
@@ -525,8 +516,7 @@ def print_last_warn():
     HASHTAG = load_from_file(LAST_HASHTAG_STR)
     last_warn_list = load_from_file(LAST_WARN_LIST)
 
-    # fancy = f"\nFancy little list of to-be-warned clients (assholes) for hashtag '{last_hashtag}' excluding VIPs:\n"
-    fancy = "\n"
+    fancy = ""
     psign = "+"
     for client in sorted(last_warn_list):
         if client not in vip_clients:
@@ -536,17 +526,19 @@ def print_last_warn():
             #     print("+" * (len(warn_dic[client])-1), end='')
             # print("")
 
+    print(f"\nFancy little list of to-be-warned clients (assholes) for hashtag '{HASHTAG}' excluding VIPs:\n")
     print(fancy)
 
     if COMPLETE_EXECUTION:  # write fancy list to report file if find assholes function was called before
         with open(f"logs/report-{HASHTAG}.txt", "a") as af:
             af.write(fancy)
 
-        telegram_send(TELEGRAM_ID, "ASSHOLES", fancy)
-        telegram_send_gif(TELEGRAM_ID)
         assholes_cout = len(fancy.split('\n'))
-        telegram_send(DUDE, "ALL COOL",
-                      f"{len(last_warn_list)}, fancy={assholes_cout}")
+
+        telegram_send(TELEGRAM_ID, f"ASSHOLES '{assholes_cout}'", fancy)
+        telegram_send_gif(TELEGRAM_ID)
+
+        telegram_send(DUDE, f"assholes  {assholes_cout}", "")
         telegram_send_document(DUDE, WARN_HISTORY_FILE)
 
 
