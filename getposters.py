@@ -96,7 +96,7 @@ def get_posters_from_shortcodes(hashtag: str, loader: instaloadercontext) -> lis
         if not visited:
             try:
                 post = Post.from_shortcode(loader.context, shortcode=shortcode)
-                sleep(round(random.uniform(0.700, 1.500), 3))
+                sleep(round(random.uniform(1.000, 2.100), 3))
                 posters.append(post.owner_username)
                 print(f"{post.owner_username:<30}UTC {post.date}")
                 shortcodes[shortcode] = True
