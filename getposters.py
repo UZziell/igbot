@@ -1,12 +1,11 @@
 import functools
 import logging
-import os
 import shutil
 import sys
-from json import load
-from os import listdir
+import json
+import os
 from os.path import exists
-from random import uniform
+import random
 from time import perf_counter, sleep
 
 from instaloader import (FrozenNodeIterator, Hashtag, Post, Profile,
@@ -82,10 +81,10 @@ def get_posters_from_shortcodes(hashtag: str, loader: instaloadercontext) -> lis
         for post in instaloader.Hashtag.from_name(loader.context, hashtag).get_posts():
             loader.download_post(post, target=hashtag)
 
-        jsons = listdir(DOWNLOAD_PATH)
+        jsons = os.listdir(DOWNLOAD_PATH)
         for json_file in jsons:
             with open(f"{DOWNLOAD_PATH}/{json_file}", "r") as rf:
-                post = load(rf)
+                post = json.load(rf)
                 shortcode = post["node"]["shortcode"]
                 shortcodes.setdefault(shortcode, False)
 
@@ -97,7 +96,7 @@ def get_posters_from_shortcodes(hashtag: str, loader: instaloadercontext) -> lis
         if not visited:
             try:
                 post = Post.from_shortcode(loader.context, shortcode=shortcode)
-                sleep(round(uniform(0.700, 1.500), 3))
+                sleep(round(random.uniform(0.700, 1.500), 3))
                 posters.append(post.owner_username)
                 print(f"{post.owner_username:<30}UTC {post.date}")
                 shortcodes[shortcode] = True
@@ -176,7 +175,7 @@ def get_hashtag_posters(hashtag, loader):
     # try:
     for post in post_iterator:
         try:
-            sleep(round(uniform(5.000, 8.000), 3))
+            sleep(round(random.uniform(5.000, 8.000), 3))
             posters.append(post.owner_username)
             print(post.owner_username, "\t", post.date)
             if len(posters) % 50 == 0:
