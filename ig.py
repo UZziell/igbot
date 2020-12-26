@@ -140,10 +140,15 @@ def remove_file(file_path):
 
 def telegram_send(user_id, header, message):
     "Parse message and split it to chunks then send the message to the @user_id"
+    hashtag = HASHTAG
+    if "#" not in hashtag:
+        hashtag = "#" + hashtag
+
     if isinstance(message, str):
         message = message.splitlines()
 
-    split = [f"#{header} <b>{HASHTAG}</b> 👇🏼"]
+
+    split = [f"#{header} <b>{hashtag}</b> 👇🏼"]
     msg = ""
     for i, line in enumerate(message):
         msg += line + "\n"
