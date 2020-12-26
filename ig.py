@@ -409,8 +409,11 @@ def sftp_client(mode, local_file, remote_file):
                     f"Updated Warning history file and pushed to server successfully, Size = {sftpp.stat(remote_file).st_size} bytes")
 
 
-def update_warndb(warned_clients):
+def update_warndb(warned_clients, hashtag):
     """creates(if not already existed) or updates the warned users dictionary"""
+    
+    if "#" in hashtag:
+        hashtag = hashtag.replace("#", "")
 
     try:  # try to fetch newest warn history from server
         sftp_client(mode="get", local_file=WARN_HISTORY_FILE,
@@ -431,8 +434,8 @@ def update_warndb(warned_clients):
 
     for client in warned_clients:
         warn_dic.setdefault(client, set())
-        if HASHTAG not in warn_dic[client] and HASHTAG != "":
-            warn_dic[client].add(HASHTAG)
+        if hashtag not in warn_dic[client] and hashtag != "":
+            warn_dic[client].add(hashtag)
 
     # Create backup
     if exists(WARN_HISTORY_FILE):
@@ -565,7 +568,7 @@ def update_warndb_manually():
     if continuee.lower() == "1":
         logger.info(
             f"Going to update history file with hashtag '{HASHTAG}' and these '{len(tobe_warned_manual)}' clients:\n {tobe_warned_manual}")
-        update_warndb(tobe_warned_manual)
+        update_warndb(tobe_warned_manual, hashtag=HASHTAG)
 
     elif continuee.lower() == "2":
         print("Cool. Job canceled and didn't update. Bye.")
@@ -639,7 +642,7 @@ def menu():
                 dump_to_file(TOP3, TEMP_TOP3)
 
                 assholes = find_assholes(top_posts=TOP3)
-                update_warndb(assholes)
+                update_warndb(assholes, hashtag=HASHTAG)
                 print_last_warn()
 
                 remove_file(TEMP_HASHTAG)
