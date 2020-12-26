@@ -7,23 +7,23 @@
 import logging
 import os
 import pickle
+import random
 import sys
+import time
 from argparse import ArgumentParser
 from datetime import datetime, timedelta
 # from json import dump, load
 from os.path import exists
-from random import choice
-from time import sleep
 
 # import jdatetime
 import pysftp
 # import requests
 # import selenium
 # from bullet import Bullet, Check, Input, YesNo  # and etc...
-from instaloader import (Post, Profile, instaloader)
+from instaloader import Post, Profile, instaloader
 from pyrogram import Client
 
-from getposters import *
+import getposters
 
 try:
     from my_secrets import *
@@ -169,7 +169,7 @@ def telegram_send_gif(user_id):
         # app.forward_messages(chat_id=user_id, from_chat_id=-1001300601863, message_ids=gif.message_id, as_copy=True)
         for _ in range(0, 10):
             try:
-                gif_id = choice(
+                gif_id = random.choice(
                     range(2, app.get_history_count(chat_id=-1001300601863)))
                 app.forward_messages(
                     chat_id=user_id, from_chat_id=-1001300601863, message_ids=gif_id, as_copy=False)
@@ -283,7 +283,7 @@ def find_assholes(top_posts):
     if exists(POSTERS_TEMP_FILE+"_"):
         posters = load_from_file(POSTERS_TEMP_FILE+"_")
     else:
-        posters = get_posters_from_shortcodes(HASHTAG, loader=L)
+        posters = getposters.get_posters_from_shortcodes(HASHTAG, loader=L)
         # posters = get_hashtag_posters(HASHTAG, L)
         # posters = get_tagged_posters(TAGGED_PROFILE, L)
         # posters = get_hashtag_posters2(HASHTAG)
@@ -326,7 +326,7 @@ def find_assholes(top_posts):
                 clients_likes[user] += 1
                 if clients_likes[user] == len(top_posts):
                     assholes.append(user)
-        sleep(5)
+        time.sleep(5)
 
     WIDTH = 140
     ASTERISK = "*"
@@ -358,7 +358,8 @@ def find_assholes(top_posts):
         TELEGRAM_ID, f"BITCHES '{len(set(bitches))}'", list(set(bitches)))
     telegram_send(
         TELEGRAM_ID, f"CHEATERS '{len(set(cheaters))}'", list(set(cheaters)))
-    telegram_send(DUDE, f"total {total} | bitches {len(set(bitches))} | cheaters {len(set(cheaters))}", "")
+    telegram_send(
+        DUDE, f"total {total} | bitches {len(set(bitches))} | cheaters {len(set(cheaters))}", "")
 
     # CLEAN UP
     # dump last warn list and hashtag to file
@@ -526,7 +527,8 @@ def print_last_warn():
             #     print("+" * (len(warn_dic[client])-1), end='')
             # print("")
 
-    print(f"\nFancy little list of to-be-warned clients (assholes) for hashtag '{HASHTAG}' excluding VIPs:\n")
+    print(
+        f"\nFancy little list of to-be-warned clients (assholes) for hashtag '{HASHTAG}' excluding VIPs:\n")
     print(fancy)
 
     if COMPLETE_EXECUTION:  # write fancy list to report file if find assholes function was called before
@@ -669,7 +671,7 @@ def menu():
         print("")
         for t in range(3, 0, -1):
             print(f"\rReloading main menu... {t}", end="")
-            sleep(1.5)
+            time.sleep(1.5)
         print("\n"*4)
 
 
