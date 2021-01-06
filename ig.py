@@ -147,7 +147,6 @@ def telegram_send(user_id, header, message):
     if isinstance(message, str):
         message = message.splitlines()
 
-
     split = [f"#{header} <b>{hashtag}</b> 👇🏼"]
     msg = ""
     for i, line in enumerate(message):
@@ -189,6 +188,9 @@ def telegram_send_document(user_id, doc):
 
 
 def instaloader_init(ig_user=USERNAME, ig_passwd=PASSWORD):
+    global SESSION_FILE
+    SESSION_FILE = f"sessions/{ig_user}-SESSION"
+
     # Get instance
     L = instaloader.Instaloader(dirname_pattern=DOWNLOAD_PATH, filename_pattern="{date_utc:%Y-%m-%d_%H-%M-%S}-{shortcode}", sleep=True,
                                 download_pictures=False, post_metadata_txt_pattern="", compress_json=False, download_geotags=False,
@@ -416,7 +418,7 @@ def sftp_client(mode, local_file, remote_file):
 
 def update_warndb(warned_clients, hashtag):
     """creates(if not already existed) or updates the warned users dictionary"""
-    
+
     if "#" in hashtag:
         hashtag = hashtag.replace("#", "")
 
@@ -463,9 +465,10 @@ def update_warndb(warned_clients, hashtag):
             "Something went wrong while pushing last warning history file to server. Keep local file safe")
 
 
-def load_or_update(client_admins, c_file):
+def load_or_update(client_admins, c_file) -> list:
     """loads given admin's clients list from file or updates them from instagram. Used for clients and VIP clients"""
     # TODO: add time based decision of fetching or loading from file: DONE!
+    clients = []
 
     update = False
     string = "clients"
