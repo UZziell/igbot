@@ -112,7 +112,8 @@ def get_posters_from_shortcodes(hashtag: str, loader: instaloadercontext) -> lis
             #             To solve this: First try to *(solve captcha)* from instagram web and *(verify phone number)* and change password if required.\n")
             #     telegram_send(TELEGRAM_ID, "Account limited",
             #                 f"Account {USERNAME} was limited, solve captcha and when it was no longer limited, press enter")
-
+            except KeyError:
+                logger.info(f"KeyError, Post {shortcode} not found.")
             except Exception as e:
                 remove_file(SESSION_FILE)
                 dump_to_file(shortcodes, TEMP_SHORTCODES)
