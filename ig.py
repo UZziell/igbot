@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # aajeZzZzZzzzPlus
-# This script finds clietns that didn't like top3 posts.
+# This script finds clients that didn't like top3 posts.
 # --------------------------------------------------------------------------
 # import json
 import logging
@@ -43,8 +43,7 @@ PASSWORD = args.password
 
 # --------------------------------------------------------------------------
 # Inputs (variables you can change)
-ADMINS = ["Improve_2020", "Girlylife.mm", "ghazal.nasiriyan", "karmaroz1",
-          "rozgoli53", "F.joharynad_2", "Farzaneh.jnad.55", "Shabahang_perfume", "Istanbul_va_bishtar"]
+ADMINS = ["Improve_2020", "Girlylife.mm", "ghazal.nasiriyan"]
 
 VIPS = ["solace.land"]
 
@@ -72,7 +71,7 @@ POSTERS_TEMP_FILE = "./temp/_posters.pickle"
 COMPLETE_EXECUTION = False
 PWD = os.getcwd()
 FIREFOX_DRIVER_PATH = rf"{PWD}/drivers/geckodriver"
-FIREFOX_PROFILE_PATH = r"/home/uzziel/.mozilla/firefox/euvy32zo.freshprofile"
+FIREFOX_PROFILE_PATH = r"/home/user/.mozilla/firefox/euvy32zo.freshprofile"
 HEADLESS = False
 # --------------------------------------------------------------------------
 
