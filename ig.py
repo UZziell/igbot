@@ -210,15 +210,17 @@ def instaloader_init(ig_user=USERNAME, ig_passwd=PASSWORD):
 def get_followings(usernames, loader):
     """find followings of admin users (subscribed users and VIP users)"""
     followings = []
-
     logger.info(f"Fetching admin:{usernames} followees...")
 
     try:
         for username in usernames:
+            username_followings = []
             profile = Profile.from_username(loader.context, username)
             print(f"Fetching {username} followings...")
             for followee in profile.get_followees():
                 followings.append(str(followee.username).lower())
+                username.append(str(followee.username).lower())
+            dump_to_file(username_followings, f"temp/{username.lower()}_followings.list")
 
     except instaloader.QueryReturnedBadRequestException as e:
         remove_file(SESSION_FILE)
@@ -531,13 +533,19 @@ def print_last_warn():
     last_warn_list = load_from_file(LAST_WARN_LIST)
     
     # devide assholes by admin
-    L = instaloader_init()
     assholes_per_admin = {}
     admins_followers = {}
 
     for admin in ADMINS:
         assholes_per_admin.setdefault(admin, "")
-        followers = get_followings([admin], L)
+
+        if exists(f"temp/{admin.lower()}_followings.list"):
+            followers = load_from_file(f"temp/{admin.lower()}_followings.list")
+
+        else:
+            L = instaloader_init()
+            followers = get_followings([admin], L)
+
         admins_followers[admin] = followers
 
     psign = "+"
@@ -545,7 +553,7 @@ def print_last_warn():
         if client not in vip_clients:
             for admin, admins_clients in admins_followers.items():
                 if client in admins_clients:
-                    assholes_per_admin[admin] += f"{client} {psign * ((len(warn_dic[client])-1) % 3)}\n"
+                    assholes_per_admin[admin] = assholes_per_admin[admin] + f"{client} {psign * ((len(warn_dic[client])-1) % 3)}\n"
     
     # fancy = ""
     # psign = "+"
@@ -553,9 +561,10 @@ def print_last_warn():
     #     if client not in vip_clients:
     #         fancy = fancy + \
     #             f"{client} {psign * ((len(warn_dic[client])-1) % 3)}\n"
-    #         if client in warn_dic.keys():
-    #             print("+" * (len(warn_dic[client])-1), end='')
-    #         print("")
+
+            # if client in warn_dic.keys():
+            #     print("+" * (len(warn_dic[client])-1), end='')
+            # print("")
 
     print(
         f"\nFancy little list of to-be-warned clients (assholes) for hashtag '{HASHTAG}' excluding VIPs:\n")
