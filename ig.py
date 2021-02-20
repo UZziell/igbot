@@ -537,7 +537,7 @@ def print_last_warn():
 
     for admin in ADMINS:
         assholes_per_admin.setdefault(admin, "")
-        followers = get_followings(list(admin), L)
+        followers = get_followings([admin], L)
         admins_followers[admin] = followers
 
     psign = "+"
