@@ -219,7 +219,7 @@ def get_followings(usernames, loader):
             print(f"Fetching {username} followings...")
             for followee in profile.get_followees():
                 followings.append(str(followee.username).lower())
-                username.append(str(followee.username).lower())
+                
             dump_to_file(username_followings, f"temp/{username.lower()}_followings.list")
 
     except instaloader.QueryReturnedBadRequestException as e:
