@@ -475,7 +475,7 @@ def load_or_update(client_admins, c_file) -> list:
         string = "VIP " + string
 
     if exists(c_file):
-        hour_ago = datetime.now() - timedelta(minutes=300)
+        hour_ago = datetime.now() - timedelta(minutes=90)
         file_epoch = os.path.getmtime(c_file)
         file_mtime = datetime.fromtimestamp(file_epoch)
         if file_mtime > hour_ago:  # if the file was last modified during the last hour, load it
