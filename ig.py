@@ -211,7 +211,7 @@ def get_followings(usernames, loader):
     """find followings of admin users (subscribed users and VIP users)"""
     followings = []
 
-    logger.info(f"Fetching {usernames} followees...")
+    logger.info(f"Fetching admin:{usernames} followees...")
 
     try:
         for username in usernames:
@@ -228,6 +228,8 @@ def get_followings(usernames, loader):
                     To solve this: First try to *(solve captcha)* from instagram web and *(verify phone number)* and change password if required.\n")
         telegram_send(TELEGRAM_ID, "Account limited",
                       f"Account {USERNAME} was limited, solve the captcha and run again.")
+
+    logger.debug(f"admin(s) {usernames} followings: {followings}")
 
     return list(set(followings))
 
@@ -364,6 +366,7 @@ def find_assholes(top_posts):
         TELEGRAM_ID, f"BITCHES '{len(set(bitches))}'", list(set(bitches)))
     telegram_send(
         TELEGRAM_ID, f"CHEATERS '{len(set(cheaters))}'", list(set(cheaters)))
+
     telegram_send(
         DUDE, f"total {total} | bitches {len(set(bitches))} | cheaters {len(set(cheaters))}", "")
 
@@ -526,31 +529,50 @@ def print_last_warn():
     # last_hashtag = load_from_file(LAST_HASHTAG_STR)
     HASHTAG = load_from_file(LAST_HASHTAG_STR)
     last_warn_list = load_from_file(LAST_WARN_LIST)
+    
+    # devide assholes by admin
+    L = instaloader_init()
+    assholes_per_admin = {}
+    admins_followers = {}
 
-    fancy = ""
+    for admin in ADMINS:
+        assholes_per_admin.setdefault(admin, "")
+        followers = get_followings(list(admin), L)
+        admins_followers[admin] = followers
+
     psign = "+"
     for client in sorted(last_warn_list):
         if client not in vip_clients:
-            fancy = fancy + \
-                f"{client} {psign * ((len(warn_dic[client])-1) % 3)}\n"
-            # if client in warn_dic.keys():
-            #     print("+" * (len(warn_dic[client])-1), end='')
-            # print("")
+            for admin, admins_clients in admins_followers.items():
+                if client in admins_clients:
+                    assholes_per_admin[admin] += f"{client} {psign * ((len(warn_dic[client])-1) % 3)}\n"
+    
+    # fancy = ""
+    # psign = "+"
+    # for client in sorted(last_warn_list):
+    #     if client not in vip_clients:
+    #         fancy = fancy + \
+    #             f"{client} {psign * ((len(warn_dic[client])-1) % 3)}\n"
+    #         if client in warn_dic.keys():
+    #             print("+" * (len(warn_dic[client])-1), end='')
+    #         print("")
 
     print(
         f"\nFancy little list of to-be-warned clients (assholes) for hashtag '{HASHTAG}' excluding VIPs:\n")
-    print(fancy)
+    print(assholes_per_admin)
+    # print(fancy)
 
     if COMPLETE_EXECUTION:  # write fancy list to report file if find assholes function was called before
-        with open(f"logs/report-{HASHTAG}.txt", "a") as af:
-            af.write(fancy)
+        total_assholes_count = 0
+        for admin, fancy in assholes_per_admin.items():
+            with open(f"logs/report-{HASHTAG}.txt", "a") as af:
+                af.write(fancy)
+            assholes_count = len(fancy.split('\n'))
+            total_assholes_count += assholes_count
+            telegram_send(TELEGRAM_ID, f"ASSHOLES '{assholes_count}', admin: {admin}", fancy)
 
-        assholes_cout = len(fancy.split('\n'))
-
-        telegram_send(TELEGRAM_ID, f"ASSHOLES '{assholes_cout}'", fancy)
         telegram_send_gif(TELEGRAM_ID)
-
-        telegram_send(DUDE, f"assholes  {assholes_cout}", "")
+        telegram_send(DUDE, f"assholes  {total_assholes_count}", "")
         telegram_send_document(DUDE, WARN_HISTORY_FILE)
 
 
