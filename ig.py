@@ -577,7 +577,7 @@ def print_last_warn():
         for admin, fancy in assholes_per_admin.items():
             with open(f"logs/report-{HASHTAG}.txt", "a") as af:
                 af.write(fancy)
-            assholes_count = len(fancy.split('\n'))
+            assholes_count = len(fancy.split('\n')) - 1
             total_assholes_count += assholes_count
             telegram_send(TELEGRAM_ID, f"ASSHOLES '{assholes_count}', admin: {admin}", fancy)
 
