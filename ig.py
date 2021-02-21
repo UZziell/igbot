@@ -43,7 +43,7 @@ PASSWORD = args.password
 
 # --------------------------------------------------------------------------
 # Inputs (variables you can change)
-ADMINS = ["Improve_2020", "Girlylife.mm", "ghazal.nasiriyan"]
+ADMINS = ["Improve_2020", "Girlylife.mm", "ghazal.nasiriyan", "Khaneh.rangii"]
 
 VIPS = ["solace.land"]
 
