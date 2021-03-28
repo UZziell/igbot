@@ -36,15 +36,21 @@ parser.add_argument('-u', '--username', required=True,
                     help="Instagram username to use, REQUIRED")
 parser.add_argument('-p', '--password', required=True,
                     help="Instagram password to use, REQUIRED")
+parser.add_argument('-a', '--admins', required=False,
+                    help="Comma seperated list of admins (ex: admin1,admin2,admin3)",
+                    default="Improve_2020,Girlylife.mm,Khaneh.rangii,ghazal.nasiriyan,Shabahang.group")
+parser.add_argument('-g', '--group', required=True,
+                    choices=['a', 'b', 'c'])
+
+
 args = parser.parse_args()
 
 USERNAME = args.username
 PASSWORD = args.password
+ADMINS = args.admins.split(",")
 
 # --------------------------------------------------------------------------
 # Inputs (variables you can change)
-ADMINS = ["Improve_2020", "Girlylife.mm", "ghazal.nasiriyan", "Khaneh.rangii"]
-
 VIPS = ["solace.land"]
 
 # HASHTAG = "TAG--" + jdatetime.datetime.now().strftime("%A-%d-%m-%Y--%H-%M")
@@ -121,7 +127,7 @@ def setup_logging():
 def dump_to_file(obj, file_path):
     with open(file_path, "wb") as wf:
         pickle.dump(obj, wf)
-    logger.debug(f"dumped {obj} to file {file_path}")
+    logger.debug(f"Dumped to file {file_path}, the object:\n{' '.join(obj)}")
 
 
 def load_from_file(file_path):
@@ -203,7 +209,6 @@ def instaloader_init(ig_user=USERNAME, ig_passwd=PASSWORD):
 
     else:
         L.load_session_from_file(ig_user, SESSION_FILE)
-
     return L
 
 
@@ -220,8 +225,9 @@ def get_followings(usernames, loader):
             for followee in profile.get_followees():
                 followings.append(str(followee.username).lower())
                 username_followings.append(str(followee.username).lower())
-                
-            dump_to_file(username_followings, f"temp/{username.lower()}_followings.list")
+
+            dump_to_file(username_followings,
+                         f"temp/{username.lower()}_followings.list")
 
     except instaloader.QueryReturnedBadRequestException as e:
         remove_file(SESSION_FILE)
@@ -286,19 +292,19 @@ def find_assholes(top_posts):
     # fetch all clients from ADMINS's followings
     clients = load_or_update(ADMINS + VIPS, CLIENTS_LIST)
     logger.info(f"Total '{len(clients)}' subscribed clients found.")
-    logger.debug(f"Clients:\n\t{sorted(clients)}\n\n")
+    logger.debug(f"Clients:\n\t{' '.join(sorted(clients))}\n\n")
 
     L = instaloader_init()
 
     # fetch hashtag posters from instagram or load from last unsuccessful execution
-    if exists(POSTERS_TEMP_FILE+"_"):
-        posters = load_from_file(POSTERS_TEMP_FILE+"_")
+    if exists(POSTERS_TEMP_FILE):
+        posters = load_from_file(POSTERS_TEMP_FILE)
     else:
         posters = getposters.get_posters_from_shortcodes(HASHTAG, loader=L)
         # posters = get_hashtag_posters(HASHTAG, L)
         # posters = get_tagged_posters(TAGGED_PROFILE, L)
         # posters = get_hashtag_posters2(HASHTAG)
-        dump_to_file(posters, POSTERS_TEMP_FILE+"_")
+        dump_to_file(posters, POSTERS_TEMP_FILE)
 
     logger.info(
         f"len(posters)={len(posters)} - len(set(posters))={len(set(posters))}")
@@ -382,7 +388,7 @@ def find_assholes(top_posts):
         af.write(report)
 
     # remove temp posters
-    remove_file(POSTERS_TEMP_FILE+"_")
+    remove_file(POSTERS_TEMP_FILE)
 
     return assholes
 
@@ -532,7 +538,7 @@ def print_last_warn():
     # last_hashtag = load_from_file(LAST_HASHTAG_STR)
     HASHTAG = load_from_file(LAST_HASHTAG_STR)
     last_warn_list = load_from_file(LAST_WARN_LIST)
-    
+
     # devide assholes by admin
     assholes_per_admin = {}
     admins_followers = {}
@@ -554,8 +560,9 @@ def print_last_warn():
         if client not in vip_clients:
             for admin, admins_clients in admins_followers.items():
                 if client in admins_clients:
-                    assholes_per_admin[admin] = assholes_per_admin[admin] + f"{client} {psign * ((len(warn_dic[client])-1) % 3)}\n"
-    
+                    assholes_per_admin[admin] = assholes_per_admin[admin] + \
+                        f"{client} {psign * ((len(warn_dic[client])-1) % 3)}\n"
+
     # fancy = ""
     # psign = "+"
     # for client in sorted(last_warn_list):
@@ -579,7 +586,8 @@ def print_last_warn():
                 af.write(fancy)
             assholes_count = len(fancy.split('\n')) - 1
             total_assholes_count += assholes_count
-            telegram_send(TELEGRAM_ID, f"ASSHOLES '{assholes_count}', admin: {admin}", fancy)
+            telegram_send(
+                TELEGRAM_ID, f"ASSHOLES '{assholes_count}', admin: {admin}", fancy)
 
         telegram_send_gif(TELEGRAM_ID)
         telegram_send(DUDE, f"assholes  {total_assholes_count}", "")
@@ -614,9 +622,8 @@ def update_warndb_manually():
 
     # Update last warn file
     old_last_warning = load_from_file(LAST_WARN_LIST)
-    new_last_warning = []
-    new_last_warning.extend(old_last_warning)
-    new_last_warning.extend(tobe_warned_manual)
+    new_last_warning = old_last_warning.extend(tobe_warned_manual)
+
     dump_to_file(new_last_warning, LAST_WARN_LIST)
 
 
@@ -720,8 +727,3 @@ def menu():
 if __name__ == "__main__":
     setup_logging()
     menu()
-
-    # with open(WARN_HISTORY_FILE, 'rb') as dbfile:
-    #     warn_dic = pickle.load(dbfile)
-    # for client in sorted(warn_dic):
-    #         print(client, warn_dic[client])
