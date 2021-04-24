@@ -42,7 +42,6 @@ parser.add_argument('-a', '--admins', required=False,
 parser.add_argument('-g', '--group', required=True,
                     choices=['a', 'b', 'c'])
 
-
 args = parser.parse_args()
 
 USERNAME = args.username
@@ -78,7 +77,7 @@ COMPLETE_EXECUTION = False
 PWD = os.getcwd()
 FIREFOX_DRIVER_PATH = rf"{PWD}/drivers/geckodriver"
 FIREFOX_PROFILE_PATH = r"/home/user/.mozilla/firefox/euvy32zo.freshprofile"
-HEADLESS = False
+HEADLESS = True
 # --------------------------------------------------------------------------
 
 logger = logging.getLogger()
@@ -89,7 +88,6 @@ def get_time():
 
 
 def setup_logging():
-
     # disable loggin of pyrogram except for errors
     logging.getLogger('pyrogram').setLevel(logging.ERROR)
     # logging.getLogger('foo').addHandler(logging.NullHandler()) # Disables logging of the module
@@ -97,31 +95,31 @@ def setup_logging():
     global logger
     now = get_time()
 
-    logFormatter = logging.Formatter(
+    log_formatter = logging.Formatter(
         "[%(asctime)s] %(name)s - %(levelname)s - %(message)s")
-    logFormatter.datefmt = "%H:%M:%S"
+    log_formatter.datefmt = "%Y-%m-%d %H:%M:%S"
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
 
     # INFO - log file handler
-    fileHandler = logging.FileHandler(
+    file_handler = logging.FileHandler(
         f"logs/{now}.log", mode='a', encoding="utf-8")
-    fileHandler.setFormatter(logFormatter)
-    fileHandler.setLevel(logging.INFO)
-    logger.addHandler(fileHandler)
+    file_handler.setFormatter(log_formatter)
+    file_handler.setLevel(logging.INFO)
+    logger.addHandler(file_handler)
 
     # Debug - log file handler
-    fileHandlerDBG = logging.FileHandler(
+    file_handler_dbg = logging.FileHandler(
         f"logs/{now}.log.debug", mode='a', encoding="utf-8")
-    fileHandlerDBG.setFormatter(logFormatter)
-    fileHandlerDBG.setLevel(logging.DEBUG)
-    logger.addHandler(fileHandlerDBG)
+    file_handler_dbg.setFormatter(log_formatter)
+    file_handler_dbg.setLevel(logging.DEBUG)
+    logger.addHandler(file_handler_dbg)
 
     # console log stream hanlder
-    consoleHandler = logging.StreamHandler()
-    consoleHandler.setFormatter(logFormatter)
-    consoleHandler.setLevel(logging.INFO)
-    logger.addHandler(consoleHandler)
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(log_formatter)
+    console_handler.setLevel(logging.INFO)
+    logger.addHandler(console_handler)
 
 
 def dump_to_file(obj, file_path):
@@ -144,7 +142,7 @@ def remove_file(file_path):
 
 
 def telegram_send(user_id, header, message):
-    "Parse message and split it to chunks then send the message to the @user_id"
+    """Parse message and split it to chunks then send the message to the @user_id"""
     hashtag = HASHTAG
     if "#" not in hashtag:
         hashtag = "#" + hashtag
@@ -184,6 +182,7 @@ def telegram_send_gif(user_id):
                     chat_id=user_id, from_chat_id=-1001300601863, message_ids=gif_id, as_copy=False)
                 break
             except Exception:
+                logger.exception("Could not send gif in telegram_send_gif")
                 pass
 
 
@@ -197,19 +196,21 @@ def instaloader_init(ig_user=USERNAME, ig_passwd=PASSWORD):
     SESSION_FILE = f"sessions/{ig_user}-SESSION"
 
     # Get instance
-    L = instaloader.Instaloader(dirname_pattern=DOWNLOAD_PATH, filename_pattern="{date_utc:%Y-%m-%d_%H-%M-%S}-{shortcode}", sleep=True,
-                                download_pictures=False, post_metadata_txt_pattern="", compress_json=False, download_geotags=False,
-                                save_metadata=True, download_comments=False, download_videos=False, download_video_thumbnails=False)
+    loader = instaloader.Instaloader(dirname_pattern=DOWNLOAD_PATH, sleep=True, download_pictures=False,
+                                     post_metadata_txt_pattern="", compress_json=False, download_geotags=False,
+                                     filename_pattern="{date_utc:%Y-%m-%d_%H-%M-%S}-{shortcode}",
+                                     save_metadata=True, download_comments=False, download_videos=False,
+                                     download_video_thumbnails=False)
 
     if not exists(SESSION_FILE):
         logger.info(f"Logging-in with account '{ig_user}'...")
-        L.login(ig_user, ig_passwd)        # (login)
-        L.save_session_to_file(filename=SESSION_FILE)
+        loader.login(ig_user, ig_passwd)  # (login)
+        loader.save_session_to_file(filename=SESSION_FILE)
         # L.interactive_login(USER)      # (ask password on terminal)
 
     else:
-        L.load_session_from_file(ig_user, SESSION_FILE)
-    return L
+        loader.load_session_from_file(ig_user, SESSION_FILE)
+    return loader
 
 
 def get_followings(usernames, loader):
@@ -251,7 +252,7 @@ def get_post_likers(shortcode, loader):
         logger.error(
             f"HUMAN READABLE ERROR LOG:\n\
                 Could not create post from shortcode '{shortcode}'.\n\
-                    Make sure:\n\t-the post is not deleted and \n\t-there is no typo in the shortcode \n then try again")
+                Make sure:\n\t-the post is not deleted and \n\t-there is no typo in the shortcode \n then try again")
         sys.exit("Exited 1")
 
     except instaloader.QueryReturnedBadRequestException as e:
@@ -280,8 +281,8 @@ def find_assholes(top_posts):
     Then finds all posts with given hashtag. Then finds top-posts likers.
     Finally finds which client didn't like top-posts at all."""
 
-    bitches = []    # users that posted the hashtag but aren't clients
-    cheaters = []   # hastag_posters with more than one post
+    bitches = []  # users that posted the hashtag but aren't clients
+    cheaters = []  # hastag_posters with more than one post
     clients_likes = {}  # saving client like per post to find assholes
     assholes = []  # Assholes, clients that didn't like top posts
 
@@ -294,13 +295,13 @@ def find_assholes(top_posts):
     logger.info(f"Total '{len(clients)}' subscribed clients found.")
     logger.debug(f"Clients:\n\t{' '.join(sorted(clients))}\n\n")
 
-    L = instaloader_init()
+    loader = instaloader_init()
 
     # fetch hashtag posters from instagram or load from last unsuccessful execution
     if exists(POSTERS_TEMP_FILE):
         posters = load_from_file(POSTERS_TEMP_FILE)
     else:
-        posters = getposters.get_posters_from_shortcodes(HASHTAG, loader=L)
+        posters = getposters.get_posters_from_shortcodes(HASHTAG, loader=loader)
         # posters = get_hashtag_posters(HASHTAG, L)
         # posters = get_tagged_posters(TAGGED_PROFILE, L)
         # posters = get_hashtag_posters2(HASHTAG)
@@ -316,7 +317,7 @@ def find_assholes(top_posts):
     for poster in posters:
         if poster not in clients:
             bitches.append(poster)
-            posters.remove(poster)   # remove bitches from posters
+            posters.remove(poster)  # remove bitches from posters
         if posters.count(poster) > 1:
             cheaters.append(poster)
             posters.remove(poster)
@@ -329,16 +330,16 @@ def find_assholes(top_posts):
     # find likers of every post and mark those who didn't like them
     logger.info(f"Fetching posts {top_posts} likes from instagram...")
     for shortcode in top_posts:
-        post_likers = get_post_likers(shortcode, L)
+        post_likers = get_post_likers(shortcode, loader)
         client_post_likers = [
             client for client in post_likers if client in posters]
         logger.info(f"  post '{shortcode}' had {len(post_likers)} likes; "
-                    f"'{len(client_post_likers)}' of which were client ~ {int((len(client_post_likers)/len(post_likers))*100)}%")
+                    f"'{len(client_post_likers)}' of which were client ~ {int((len(client_post_likers) / len(post_likers)) * 100)}%")
         logger.debug(f"likes => {sorted(post_likers)}\n")
 
         # find which client didn't like current post and add one to clients_likes[client] dict
         for user in posters:
-            if user not in post_likers and user+".hami2020" not in post_likers and user+".lrs" not in post_likers and user+".ikiu" not in post_likers:
+            if user not in post_likers and user + ".hami2020" not in post_likers and user + ".lrs" not in post_likers and user + ".ikiu" not in post_likers:
                 clients_likes.setdefault(user, 0)
                 clients_likes[user] += 1
                 if clients_likes[user] == len(top_posts):
@@ -349,22 +350,22 @@ def find_assholes(top_posts):
     ASTERISK = "*"
     ASTERISK_COUNT = 50
     SPACE = " "
-    SPACE_COUNT = int((WIDTH - ASTERISK_COUNT*2 - 14)/2)
+    SPACE_COUNT = int((WIDTH - ASTERISK_COUNT * 2 - 14) / 2)
 
     report = f"\
-        \n{ASTERISK*WIDTH}\
-        \n{ASTERISK*WIDTH}\
-        \n{ASTERISK*ASTERISK_COUNT}{SPACE*SPACE_COUNT}    REPORT    {SPACE*SPACE_COUNT}{ASTERISK*ASTERISK_COUNT}\
-        \n{ASTERISK*ASTERISK_COUNT : <{ASTERISK_COUNT}}{HASHTAG : ^{WIDTH-ASTERISK_COUNT*2}}{ASTERISK*ASTERISK_COUNT}\
-        \n{ASTERISK*ASTERISK_COUNT : <{ASTERISK_COUNT}}{total : ^{WIDTH-ASTERISK_COUNT*2}}{ASTERISK*ASTERISK_COUNT}\
-        \n{ASTERISK*WIDTH}\
-        \n{ASTERISK*WIDTH}\
-        \n{ASTERISK*ASTERISK_COUNT}{SPACE*SPACE_COUNT}'{len(set(bitches)): >3}' Bitches {SPACE*SPACE_COUNT}{ASTERISK*ASTERISK_COUNT}\n{sorted(bitches)}\
-        \n{ASTERISK*WIDTH}\
-        \n{ASTERISK*ASTERISK_COUNT}{SPACE*SPACE_COUNT}'{len(set(cheaters)): >3}' Cheaters{SPACE*SPACE_COUNT}{ASTERISK*ASTERISK_COUNT}\n{sorted(cheaters)}\
-        \n{ASTERISK*WIDTH}\
-        \n{ASTERISK*ASTERISK_COUNT}{SPACE*SPACE_COUNT}'{len(assholes): >3}' Assholes{SPACE*SPACE_COUNT}{ASTERISK*ASTERISK_COUNT}\n{sorted(assholes)}\
-        \n{ASTERISK*WIDTH}\n"
+        \n{ASTERISK * WIDTH}\
+        \n{ASTERISK * WIDTH}\
+        \n{ASTERISK * ASTERISK_COUNT}{SPACE * SPACE_COUNT}    REPORT    {SPACE * SPACE_COUNT}{ASTERISK * ASTERISK_COUNT}\
+        \n{ASTERISK * ASTERISK_COUNT : <{ASTERISK_COUNT}}{HASHTAG : ^{WIDTH - ASTERISK_COUNT * 2}}{ASTERISK * ASTERISK_COUNT}\
+        \n{ASTERISK * ASTERISK_COUNT : <{ASTERISK_COUNT}}{total : ^{WIDTH - ASTERISK_COUNT * 2}}{ASTERISK * ASTERISK_COUNT}\
+        \n{ASTERISK * WIDTH}\
+        \n{ASTERISK * WIDTH}\
+        \n{ASTERISK * ASTERISK_COUNT}{SPACE * SPACE_COUNT}'{len(set(bitches)): >3}' Bitches {SPACE * SPACE_COUNT}{ASTERISK * ASTERISK_COUNT}\n{sorted(bitches)}\
+        \n{ASTERISK * WIDTH}\
+        \n{ASTERISK * ASTERISK_COUNT}{SPACE * SPACE_COUNT}'{len(set(cheaters)): >3}' Cheaters{SPACE * SPACE_COUNT}{ASTERISK * ASTERISK_COUNT}\n{sorted(cheaters)}\
+        \n{ASTERISK * WIDTH}\
+        \n{ASTERISK * ASTERISK_COUNT}{SPACE * SPACE_COUNT}'{len(assholes): >3}' Assholes{SPACE * SPACE_COUNT}{ASTERISK * ASTERISK_COUNT}\n{sorted(assholes)}\
+        \n{ASTERISK * WIDTH}\n"
 
     logger.info(report)
     # msg_cheaters = "CHEATERS: \n\n"
@@ -394,18 +395,19 @@ def find_assholes(top_posts):
 
 
 def sftp_client(mode, local_file, remote_file):
-
     cnopts = pysftp.CnOpts()
     cnopts.hostkeys = None
 
-    with pysftp.Connection(host=SFTP["server"], username=SFTP["username"], password=SFTP["passwd"], port=SFTP["port"], cnopts=cnopts) as sftpp:
+    with pysftp.Connection(host=SFTP["server"], username=SFTP["username"], password=SFTP["passwd"], port=SFTP["port"],
+                           cnopts=cnopts) as sftpp:
         logger.info(
             f"Connection succesfully established to sftp server '{SFTP['server']}'")
 
         if mode == "get":
             if sftpp.exists(remote_file) and sftpp.stat(remote_file).st_size > 0:
                 # if local file exists, only replace remote with local if remote file is bigger in size
-                if (exists(local_file) and sftpp.stat(remote_file).st_size > os.path.getsize(local_file)) or not exists(local_file):
+                if (exists(local_file) and sftpp.stat(remote_file).st_size > os.path.getsize(local_file)) or not exists(
+                        local_file):
                     sftpp.get(remote_file, local_file)
                     logger.info(
                         f"Pulled newest warning history file and saved to /data. Size = {sftpp.stat(remote_file).st_size} bytes")
@@ -416,9 +418,9 @@ def sftp_client(mode, local_file, remote_file):
         elif mode == "put":
             if exists(local_file) and os.path.getsize(local_file) > 0:
                 # if remote file exists, only replace local file with remote file if local file is bigger in size
-                if (sftpp.exists(remote_file) and os.path.getsize(local_file) > sftpp.stat(remote_file).st_size):
+                if sftpp.exists(remote_file) and os.path.getsize(local_file) > sftpp.stat(remote_file).st_size:
                     backupname = remote_file + \
-                        f"-{get_time()}"
+                                 f"-{get_time()}"
                     sftpp.rename(remote_file, backupname)
                     sftpp.put(local_file, remote_file)
                 elif not sftpp.exists(remote_file):
@@ -493,7 +495,7 @@ def load_or_update(client_admins, c_file) -> list:
         if file_mtime > hour_ago:  # if the file was last modified during the last hour, load it
             clients = load_from_file(c_file)
             logger.info(f"Loaded {len(clients)} {string} from file.")
-            if len(clients) == 0:    # if the loaded file was empty and didn't have any client
+            if len(clients) == 0:  # if the loaded file was empty and didn't have any client
                 logger.info("Loaded file was empty. Mandatory update")
                 update = True
         else:  # if the file was not updated in the last hour, then update from instagram
@@ -525,7 +527,7 @@ def print_warning_history():
             for hashtag in warn_dic[client]:
                 hashtags.add(hashtag)
             # print(f"{client : <30}{'+' * (len(warn_dic[client])-1) : ^13}{warn_dic[client]} ** VIP ** ")
-            print(f"{client} {'+' * (len(warn_dic[client])-1)}")
+            print(f"{client} {'+' * (len(warn_dic[client]) - 1)}")
 
     print(
         f"\nThis history included '{len(warn_dic)}' clients and '{len(hashtags)}' hashtags: {sorted(hashtags)}")
@@ -561,7 +563,7 @@ def print_last_warn():
             for admin, admins_clients in admins_followers.items():
                 if client in admins_clients:
                     assholes_per_admin[admin] = assholes_per_admin[admin] + \
-                        f"{client} {psign * ((len(warn_dic[client])-1) % 3)}\n"
+                                                f"{client} {psign * ((len(warn_dic[client]) - 1) % 3)}\n"
 
     # fancy = ""
     # psign = "+"
@@ -570,9 +572,9 @@ def print_last_warn():
     #         fancy = fancy + \
     #             f"{client} {psign * ((len(warn_dic[client])-1) % 3)}\n"
 
-            # if client in warn_dic.keys():
-            #     print("+" * (len(warn_dic[client])-1), end='')
-            # print("")
+    # if client in warn_dic.keys():
+    #     print("+" * (len(warn_dic[client])-1), end='')
+    # print("")
 
     print(
         f"\nFancy little list of to-be-warned clients (assholes) for hashtag '{HASHTAG}' excluding VIPs:\n")
@@ -614,7 +616,8 @@ def update_warndb_manually():
             \nYour choice: ")
     if continuee.lower() == "1":
         logger.info(
-            f"Going to update history file with hashtag '{HASHTAG}' and these '{len(tobe_warned_manual)}' clients:\n {tobe_warned_manual}")
+            f"Going to update history file with hashtag '{HASHTAG}' and these '{len(tobe_warned_manual)}' clients:\n "
+            f"{tobe_warned_manual}")
         update_warndb(tobe_warned_manual, hashtag=HASHTAG)
 
     elif continuee.lower() == "2":
@@ -631,8 +634,10 @@ def menu():
     global HASHTAG, COMPLETE_EXECUTION, TAGGED_PROFILE, TOP3
     while True:
         read_inputs = True
-        choices = ["1> Find Assholse\t(Find clients that didn't like posts of a certain hashtag)", "2> Print Warning History\t(History of asshole clients from the beginning of the time)",
-                   "3> Print Last Assholes\t(Print asshole clients (one in each line) of the last search)", "4> Manually Update Warning History (update warning history file manually from a list of input clients)",
+        choices = ["1> Find Assholse\t(Find clients that didn't like posts of a certain hashtag)",
+                   "2> Print Warning History\t(History of asshole clients from the beginning of the time)",
+                   "3> Print Last Assholes\t(Print asshole clients (one in each line) of the last search)",
+                   "4> Manually Update Warning History (update warning history manually from a list of input clients)",
                    "5> Exit", "6> Find Assholes with latest inputs (EXPERIMENTAL)"]
 
         print("Main Menu:")
@@ -663,7 +668,7 @@ def menu():
                 for i in range(0, 3):
                     try:
                         post_link = input(
-                            f" -- Enter {nth[i+1]} top-post link (press enter to skip and use '{TOP3[i]}' as {nth[i+1]} link): ")
+                            f" -- Enter {nth[i + 1]} top-post link (press enter to skip and use '{TOP3[i]}' as {nth[i + 1]} link): ")
                         if post_link != "":
                             TOP3[i] = post_link.split("/")[4]
                     except IndexError:
@@ -695,7 +700,8 @@ def menu():
                 remove_file(TEMP_TOP3)
 
             elif continuee.lower() == "2":
-                print("\nSo edit the inputs and re-run the script! (To edit the Account or Admins or VIP-Admins, manually edit the source file.)")
+                print(
+                    "\nSo edit the inputs and re-run the script! (To edit the Account or Admins or VIP-Admins, manually edit the source file.)")
             else:
                 sys.exit("Exited 1, Invalid user input!")
 
@@ -721,7 +727,7 @@ def menu():
         for t in range(3, 0, -1):
             print(f"\rReloading main menu... {t}", end="")
             time.sleep(1.5)
-        print("\n"*4)
+        print("\n" * 4)
 
 
 if __name__ == "__main__":
