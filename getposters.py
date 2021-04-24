@@ -8,7 +8,7 @@ from os.path import exists
 import random
 from time import perf_counter, sleep
 
-from instaloader import (FrozenNodeIterator, Hashtag, Post, Profile,
+from instaloader import (FrozenNodeIterator, NodeIterator, Hashtag, Post, Profile,
                          instaloader, instaloadercontext, resumable_iteration)
 
 # from my_secrets import BACKUP_USERNAME, LOGIN_CREDS, TELEGRAM_ID
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 logFormatter = logging.Formatter(
     "[%(asctime)s] %(name)s - %(levelname)s - %(message)s")
 logFormatter.datefmt = "%H:%M:%S"
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # console log stream hanlder
@@ -41,7 +41,6 @@ consoleHandler.setFormatter(logFormatter)
 consoleHandler.setLevel(logging.INFO)
 logger.addHandler(consoleHandler)
 
-
 # DOWNLOAD_PATH = f"./temp/{HASHTAG}"
 TEMP_SHORTCODES = "./temp/_shortcodes.pickle"
 TEMP_POSTERS = "./temp/__posters.pickle"
@@ -49,15 +48,18 @@ TEMP_POSTERS = "./temp/__posters.pickle"
 
 def timer(func):
     """Print the runtime of the decorated function"""
+
     @functools.wraps(func)
     def wrapper_timer(*args, **kwargs):
-        start_time = perf_counter()    # 1
+        start_time = perf_counter()  # 1
         value = func(*args, **kwargs)
-        end_time = perf_counter()      # 2
-        run_time = end_time - start_time    # 3
+        end_time = perf_counter()  # 2
+        run_time = end_time - start_time  # 3
         print(f"Finished {func.__name__!r} in {run_time:.4f} secs")
         return value
+
     return wrapper_timer
+
 
 @timer
 def get_posters_from_shortcodes(hashtag: str, loader: instaloadercontext) -> list:
@@ -78,7 +80,16 @@ def get_posters_from_shortcodes(hashtag: str, loader: instaloadercontext) -> lis
             posts found so far: {len(posters)}")
 
     else:
-        for post in instaloader.Hashtag.from_name(loader.context, hashtag).get_posts():
+        # post_iterator = instaloader.Hashtag.from_name(loader.context, hashtag).get_posts()
+        post_iterator = NodeIterator(
+            loader.context, "9b498c08113f1e09617a1703c22b2f32",
+            lambda d: d['data']['hashtag']['edge_hashtag_to_media'],
+            lambda n: instaloader.Post(loader.context, n),
+            {'tag_name': hashtag},
+            f"https://www.instagram.com/explore/tags/{hashtag}/"
+        )
+
+        for post in post_iterator:
             loader.download_post(post, target=hashtag)
 
         jsons = os.listdir(DOWNLOAD_PATH)
@@ -109,9 +120,10 @@ def get_posters_from_shortcodes(hashtag: str, loader: instaloadercontext) -> lis
             #     dump_to_file(posters, TEMP_POSTERS)
             #     logger.error(
             #         f"Bad Request Exception. Probably the account '{USERNAME}' was limited by instagram.\n\
-            #             To solve this: First try to *(solve captcha)* from instagram web and *(verify phone number)* and change password if required.\n")
+            # To solve this: First try to *(solve captcha)* from instagram web and *(verify phone number)* and change password
+            # if required.\n")
             #     telegram_send(TELEGRAM_ID, "Account limited",
-            #                 f"Account {USERNAME} was limited, solve captcha and when it was no longer limited, press enter")
+            # f"Account {USERNAME} was limited, solve captcha and when it was no longer limited, press enter")
             except KeyError:
                 logger.info(f"KeyError, Post {shortcode} not found.")
             except Exception as e:
@@ -136,9 +148,12 @@ def get_posters_from_shortcodes(hashtag: str, loader: instaloadercontext) -> lis
                     logger.info(
                         "All accounts were limited. 1. solve the captcha 2. change password if needed. Then press ENTER to login interactively")
                     uname = input("enter instagram username: ")
-                    loader = instaloader.Instaloader(filename_pattern="{date_utc:%Y-%m-%d_%H-%M-%S}-{shortcode}", sleep=True,
-                                                     download_pictures=False, post_metadata_txt_pattern="", compress_json=False, download_geotags=False,
-                                                     save_metadata=True, download_comments=False, download_videos=False, download_video_thumbnails=False)
+                    loader = instaloader.Instaloader(filename_pattern="{date_utc:%Y-%m-%d_%H-%M-%S}-{shortcode}",
+                                                     sleep=True,
+                                                     download_pictures=False, post_metadata_txt_pattern="",
+                                                     compress_json=False, download_geotags=False,
+                                                     save_metadata=True, download_comments=False, download_videos=False,
+                                                     download_video_thumbnails=False)
                     loader.interactive_login(uname)
 
             except KeyboardInterrupt:
@@ -160,7 +175,7 @@ def get_posters_from_shortcodes(hashtag: str, loader: instaloadercontext) -> lis
 
 
 def get_hashtag_posters(hashtag, loader):
-    "Find posts from hashtag"
+    """Find posts from hashtag"""
     # ITTERATOR_TEMP = "temp/frozenNodeIterator.pickle.tmp"
     # POSTERS_TEMP = "temp/posters.pickle.tmp"
     posters = []
@@ -190,7 +205,7 @@ def get_hashtag_posters(hashtag, loader):
                 f"Bad Request Exception. Probably the account '{USERNAME}' was limited by instagram.\n\
                     To solve this: First try to *(solve captcha)* from instagram web and *(verify phone number)* and change password if required.\n")
             telegram_send(TELEGRAM_ID, "Account limited",
-                          f"Account {USERNAME} was limited, solve captcha and when it was no longer limited, press enter")
+                          f"Account {USERNAME} was limited. Solve captcha and click 'This was Me', then press enter")
 
             input(
                 "ONLY when you SOLVED THE CAPTCHA and the account was NO LONGER LIMITED, 'press enter to continiue':  ")
@@ -208,7 +223,6 @@ def get_hashtag_posters(hashtag, loader):
     #     sys.exit("User interrupted execution.\n EXITED 1")
 
     return posters
-
 
 # def firefox_builder():
 #     # binary = FirefoxBinary(FIREFOX_BINARY_PATH)
