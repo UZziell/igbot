@@ -38,7 +38,7 @@ parser.add_argument('-p', '--password', required=True,
                     help="Instagram password to use, REQUIRED")
 parser.add_argument('-a', '--admins', required=False,
                     help="Comma seperated list of admins (ex: admin1,admin2,admin3)",
-                    default="Improve_2020,Girlylife.mm,Khaneh.rangii,ghazal.nasiriyan,Shabahang.group")
+                    default="improvement.ir,Girlylife.mm,Khaneh.rangii,ghazal.nasiriyan,Shabahang.group")
 parser.add_argument('-g', '--group', required=True,
                     choices=['a', 'b', 'c'])
 
@@ -47,6 +47,7 @@ args = parser.parse_args()
 USERNAME = args.username
 PASSWORD = args.password
 ADMINS = args.admins.split(",")
+GROUP = args.group
 
 # --------------------------------------------------------------------------
 # Inputs (variables you can change)
@@ -60,12 +61,12 @@ TOP3 = ['', '', '']
 # Constants (Variables you can't change unless you know what you are doing)
 # PASSWORD = LOGIN_CREDS[USERNAME.lower()]
 SESSION_FILE = f"sessions/{USERNAME}-SESSION"
-WARN_HISTORY_REMOTE_PATH = "/littleuzer/ig/warn_history.pickle"
-WARN_HISTORY_FILE = "data/warn_history.pickle"
-LAST_WARN_LIST = "data/last_warning_list"
-CLIENTS_LIST = "data/clients_list"
-VIP_CLIENTS_LIST = "data/VIP_clients_list"
-LAST_HASHTAG_STR = "data/last_hashtag_str"
+WARN_HISTORY_REMOTE_PATH = f"/littleuzer/ig/{GROUP}/warn_history.pickle"
+WARN_HISTORY_FILE = f"data/{GROUP}/warn_history.pickle"
+LAST_WARN_LIST = f"data/{GROUP}/last_warning_list"
+CLIENTS_LIST = f"data/{GROUP}/clients_list"
+VIP_CLIENTS_LIST = f"data/{GROUP}/VIP_clients_list"
+LAST_HASHTAG_STR = f"data/{GROUP}/last_hashtag_str"
 DOWNLOAD_PATH = f"temp/DOWNLOADED"
 TEMP_HASHTAG = "temp/hashtag.str"
 TEMP_TOP3 = "temp/top3.list"
@@ -76,7 +77,7 @@ POSTERS_TEMP_FILE = "./temp/_posters.pickle"
 COMPLETE_EXECUTION = False
 PWD = os.getcwd()
 FIREFOX_DRIVER_PATH = rf"{PWD}/drivers/geckodriver"
-FIREFOX_PROFILE_PATH = r"/home/user/.mozilla/firefox/euvy32zo.freshprofile"
+FIREFOX_PROFILE_PATH = r"/home/user/.mozilla/firefox/p.freshprofile"
 HEADLESS = True
 # --------------------------------------------------------------------------
 
@@ -237,7 +238,8 @@ def get_followings(usernames, loader):
             f"Bad Request Exception. Probably the account '{USERNAME}' was limited by instagram.\n\
                     To solve this: First try to *(solve captcha)* from instagram web and *(verify phone number)* and change password if required.\n")
         telegram_send(TELEGRAM_ID, "Account limited",
-                      f"Account {USERNAME} was limited, solve the captcha and run again.")
+                      f"Account {USERNAME} was limited, solve the captcha, change password if needed. Run again and "
+                      f"click 'This Was Me' in Login Activity.")
 
     logger.debug(f"admin(s) {usernames} followings: {followings}")
 
@@ -282,12 +284,12 @@ def find_assholes(top_posts):
     Finally finds which client didn't like top-posts at all."""
 
     bitches = []  # users that posted the hashtag but aren't clients
-    cheaters = []  # hastag_posters with more than one post
+    cheaters = []  # hashtag-posters with more than one post
     clients_likes = {}  # saving client like per post to find assholes
     assholes = []  # Assholes, clients that didn't like top posts
 
     logger.info(f"Current datetime: {get_time()}")
-    logger.debug(f"Inputs: \n\tHashtag: '{HASHTAG}'\n\tAdmins: {ADMINS}\n\tVIP-Admins: {VIPS}\n\
+    logger.debug(f"Inputs: \n\tGroup: '{GROUP}'\n\tHashtag: '{HASHTAG}'\n\tAdmins: {ADMINS}\n\tVIP-Admins: {VIPS}\n\
         \tThree Posts: {top_posts}\n\tAccount: '{USERNAME}'\n\tTagged Profile: '{TAGGED_PROFILE}'")
 
     # fetch all clients from ADMINS's followings
@@ -307,8 +309,7 @@ def find_assholes(top_posts):
         # posters = get_hashtag_posters2(HASHTAG)
         dump_to_file(posters, POSTERS_TEMP_FILE)
 
-    logger.info(
-        f"len(posters)={len(posters)} - len(set(posters))={len(set(posters))}")
+    logger.info(f"len(posters)={len(posters)} - len(set(posters))={len(set(posters))}")
     logger.debug(f"'{len(posters)}' posters:    {sorted(posters)}\n\n")
 
     total = len(posters)
@@ -324,8 +325,7 @@ def find_assholes(top_posts):
 
     # remove dulicate usernames
     posters = list(set(posters))
-    logger.info(
-        f"'{len(posters)}' unique posts from clients:\t{sorted(posters)}")
+    logger.info(f"'{len(posters)}' unique posts from clients:\t{sorted(posters)}")
 
     # find likers of every post and mark those who didn't like them
     logger.info(f"Fetching posts {top_posts} likes from instagram...")
@@ -355,7 +355,7 @@ def find_assholes(top_posts):
     report = f"\
         \n{ASTERISK * WIDTH}\
         \n{ASTERISK * WIDTH}\
-        \n{ASTERISK * ASTERISK_COUNT}{SPACE * SPACE_COUNT}    REPORT    {SPACE * SPACE_COUNT}{ASTERISK * ASTERISK_COUNT}\
+        \n{ASTERISK * ASTERISK_COUNT}{SPACE * SPACE_COUNT} REPORT:GROUP_{GROUP} {SPACE * SPACE_COUNT}{ASTERISK * ASTERISK_COUNT}\
         \n{ASTERISK * ASTERISK_COUNT : <{ASTERISK_COUNT}}{HASHTAG : ^{WIDTH - ASTERISK_COUNT * 2}}{ASTERISK * ASTERISK_COUNT}\
         \n{ASTERISK * ASTERISK_COUNT : <{ASTERISK_COUNT}}{total : ^{WIDTH - ASTERISK_COUNT * 2}}{ASTERISK * ASTERISK_COUNT}\
         \n{ASTERISK * WIDTH}\
@@ -372,13 +372,11 @@ def find_assholes(top_posts):
     # for cheater in cheaters:
     #     msg_cheaters += (cheater + "\n")
 
-    telegram_send(
-        TELEGRAM_ID, f"BITCHES '{len(set(bitches))}'", list(set(bitches)))
-    telegram_send(
-        TELEGRAM_ID, f"CHEATERS '{len(set(cheaters))}'", list(set(cheaters)))
+    telegram_send(TELEGRAM_ID, f"group_{GROUP} || #BITCHES '{len(set(bitches))}'", list(set(bitches)))
+    telegram_send(TELEGRAM_ID, f"group_{GROUP} || #CHEATERS '{len(set(cheaters))}'", list(set(cheaters)))
 
-    telegram_send(
-        DUDE, f"total {total} | bitches {len(set(bitches))} | cheaters {len(set(cheaters))}", "")
+    telegram_send(DUDE, f"group_{GROUP} | total {total} | bitches {len(set(bitches))} | cheaters {len(set(cheaters))}",
+                  "")
 
     # CLEAN UP
     # dump last warn list and hashtag to file
@@ -436,8 +434,7 @@ def update_warndb(warned_clients, hashtag):
         hashtag = hashtag.replace("#", "")
 
     try:  # try to fetch newest warn history from server
-        sftp_client(mode="get", local_file=WARN_HISTORY_FILE,
-                    remote_file=WARN_HISTORY_REMOTE_PATH)
+        sftp_client(mode="get", local_file=WARN_HISTORY_FILE, remote_file=WARN_HISTORY_REMOTE_PATH)
     except Exception as e:
         logger.exception(e)
         logger.error(
@@ -474,8 +471,7 @@ def update_warndb(warned_clients, hashtag):
                     remote_file=WARN_HISTORY_REMOTE_PATH)
     except Exception as e:
         logger.exception(e)
-        logger.error(
-            "Something went wrong while pushing last warning history file to server. Keep local file safe")
+        logger.error("Something went wrong while pushing last warning history file to server. Keep local file safe")
 
 
 def load_or_update(client_admins, c_file) -> list:
@@ -529,8 +525,7 @@ def print_warning_history():
             # print(f"{client : <30}{'+' * (len(warn_dic[client])-1) : ^13}{warn_dic[client]} ** VIP ** ")
             print(f"{client} {'+' * (len(warn_dic[client]) - 1)}")
 
-    print(
-        f"\nThis history included '{len(warn_dic)}' clients and '{len(hashtags)}' hashtags: {sorted(hashtags)}")
+    print(f"\nThis history included '{len(warn_dic)}' clients and '{len(hashtags)}' hashtags: {sorted(hashtags)}")
 
 
 def print_last_warn():
@@ -576,8 +571,7 @@ def print_last_warn():
     #     print("+" * (len(warn_dic[client])-1), end='')
     # print("")
 
-    print(
-        f"\nFancy little list of to-be-warned clients (assholes) for hashtag '{HASHTAG}' excluding VIPs:\n")
+    print(f"\nFancy little list of to-be-warned clients (assholes) for hashtag '{HASHTAG}' excluding VIPs:\n")
     print(assholes_per_admin)
     # print(fancy)
 
@@ -588,8 +582,7 @@ def print_last_warn():
                 af.write(fancy)
             assholes_count = len(fancy.split('\n')) - 1
             total_assholes_count += assholes_count
-            telegram_send(
-                TELEGRAM_ID, f"ASSHOLES '{assholes_count}', admin: {admin}", fancy)
+            telegram_send(TELEGRAM_ID, f"group_{GROUP} || #ASSHOLES '{assholes_count}', admin: {admin}", fancy)
 
         telegram_send_gif(TELEGRAM_ID)
         telegram_send(DUDE, f"assholes  {total_assholes_count}", "")
@@ -599,8 +592,7 @@ def print_last_warn():
 def update_warndb_manually():
     """updates warning history file manually from user input list of clients and a hashtag based on current time."""
     tobe_warned_manual = []
-    print(
-        "Enter/Paste your list of clients (one user per line). Ctrl-D or Ctrl-Z ( windows ) to save it.\r\n")
+    print("Enter/Paste your list of clients (one user per line). Ctrl-D or Ctrl-Z ( windows ) to save it.\r\n")
     usr_input_list = sys.stdin.readlines()
 
     for i in usr_input_list:
@@ -652,7 +644,7 @@ def menu():
                 user_choice = "1"
                 read_inputs = False
             else:
-                print("Could not find lastest execution info!!!\n")
+                print("Could not find latest execution info!!!\n")
                 continue
 
         if user_choice == "1":
@@ -672,11 +664,11 @@ def menu():
                         if post_link != "":
                             TOP3[i] = post_link.split("/")[4]
                     except IndexError:
-                        print(
-                            "Please enter a link that follows this format: https://instagram.com/p/SHORTCODE/...")
+                        print("Please enter a link that follows this format: https://instagram.com/p/SHORTCODE/...")
                         sys.exit("Exited 1, Invalid user input!")
 
             print(f"Current Inputs:\n\
+            \tGroup: '{GROUP}'\n\
             \tHashtag: '{HASHTAG}'\n\
             \tAdmins: {ADMINS}\n\
             \tVIP-Admins: {VIPS}\n\
@@ -720,8 +712,7 @@ def menu():
             break
 
         else:
-            print(
-                f"Your choice should be between 1-{len(choices)}! Choose wisely.")
+            print(f"Your choice should be between 1-{len(choices)}! Choose wisely.")
 
         print("")
         for t in range(3, 0, -1):
